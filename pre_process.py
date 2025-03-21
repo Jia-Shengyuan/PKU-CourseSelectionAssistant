@@ -35,6 +35,7 @@ def extract_visible_text(html_content):
     return '\n'.join(visible_blocks)
 
 if __name__ == '__main__':
+    
     if len(sys.argv) != 2:
         print("使用方法: python html_text_extractor.py <输入文件.html>")
         sys.exit(1)
