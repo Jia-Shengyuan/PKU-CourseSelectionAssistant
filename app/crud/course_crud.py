@@ -24,14 +24,19 @@ def get_courses_by_name(db: Session, name: str):
         "I": "1", "II": "2", "III": "3", "IV": "4", "V": "5",
         "VI": "6", "VII": "7", "VIII": "8", "IX": "9", "X": "10",
     }
+    kanji_to_arabic = {
+        "一": "1", "二": "2", "三": "3", "四": "4", "五": "5",
+        "六": "6", "七": "7", "八": "8", "九" : "9", "十": "10",
+    }
 
     def normalize_name(name: str) -> str:
+        # 去除括号、特殊字符、空格
+        name = re.sub(r"[（）()【】《》\[\]{}、·\s]", "", name)
         # 替换罗马数字为阿拉伯数字
         for roman, arabic in roman_to_arabic.items():
             name = name.replace(roman, arabic)
-
-        # 去除括号、特殊字符、空格
-        name = re.sub(r"[（）()【】《》\[\]{}、·\s]", "", name)
+        for kanji, arabic in kanji_to_arabic.items():
+            name = name.replace(kanji, arabic)
 
         return name.lower()
 

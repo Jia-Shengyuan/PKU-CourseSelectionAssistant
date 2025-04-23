@@ -7,13 +7,13 @@
     },
 
     "user": {
-        "grade": 1,
+        "grade": "大一下",
         "introduction": "你可以在这里介绍你自己，说人话即可，这会帮助AI选择更符合你特点的课程"
     },
 
     "course": {
-        "extra_course_list": [],
-        "exclude_course_list": [],
+        "extra_course_list": ["数值分析", "高等数学B2", "普通物理I"],
+        "excluded_course_list": ["数值分析"],
         "min_credit": 20,
         "max_credit": 24,
         "preference" : "你可以在这里更详细地描述你的选课偏好（比如偏好给分好的课，除非没得选否则拒绝早八）"
