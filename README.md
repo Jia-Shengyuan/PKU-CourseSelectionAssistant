@@ -26,6 +26,14 @@ update 2025.4.24 by devout:
 
 - `scripts/search_from_config.py` 是根据 `config/config.json` 的信息和 `config/plan.pdf` 的信息，在数据库中进行查找，并返回一个list包含课程的所有教室信息。
 
+### 调用方法
+
+```python
+from scripts.search_from_config import get_courses
+
+result = get_courses()
+```
+
 ### 一些注意事项
 
 - 现在培养方案pdf必须重命名为 `plan.pdf`
