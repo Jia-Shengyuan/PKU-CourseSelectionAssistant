@@ -1,0 +1,5 @@
+fastapi
+pdfplumber
+uvicorn
+pydantic
+sqlalchemy
