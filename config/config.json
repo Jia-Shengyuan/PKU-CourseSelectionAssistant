@@ -3,13 +3,15 @@
     "model": {
         "base_url": "https://api.siliconflow.cn/v1/",
         "model_name": "deepseek-ai/DeepSeek-V3",
-        "api_key": "API Key here",
+        "api_key": "API Key Here",
         "temperature": 0.7,
         "top_p": 0.95,
         "stream": true
     },
 
     "user": {
+        "student_id": "your student id",
+        "portal_password": "your portal password",
         "grade": "大一下",
         "introduction": "你可以在这里介绍你自己，说人话即可，这会帮助AI选择更符合你特点的课程"
     },

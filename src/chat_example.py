@@ -1,11 +1,14 @@
-from agent.llm import LLM_API, LLM_Settings
+import asyncio
+from agent.llm import LLM, LLM_Settings, AsyncLLM
 from logger.logger import Logger
+from typing import List
+from rich.markdown import Markdown
 
-def main():
+def normal_chat():
 
     logger = Logger()
     settings = LLM_Settings()
-    llm = LLM_API(settings, logger)
+    llm = LLM(settings, logger)
 
     messages = [{"role": "system", "content": "你是一个AI助手，请回答用户的问题。"}]
 
@@ -34,7 +37,52 @@ def main():
 
 
         except Exception as e:
-            logger.log_error(f"发生错误: {str(e)}")
+            logger.log_error(e)
+
+async def async_chat(queries : List[str], display_while_running : bool = False):
+
+    logger = Logger()
+    settings = LLM_Settings()
+    llm = AsyncLLM(settings, logger)
+
+    results = []
+
+    async def single_chat(query : str):
+        
+        messages = [{"role": "system", "content": "你是一个AI助手，请回答用户的问题。"},
+                    {"role": "user", "content": query}]
+        
+        try:
+
+            response_generator = llm.chat(messages)
+            full_response = ""
+            if display_while_running:
+                logger.log("AI回复: ")
+
+            async for token in response_generator:
+                if display_while_running:
+                    logger.log(token, end="")
+                full_response += token
+
+            if display_while_running:
+                logger.log("")
+            results.append(full_response)
+
+        except Exception as e:
+            logger.log_error(e)
+
+    tasks = [single_chat(query) for query in queries]
+    await asyncio.gather(*tasks)
+
+    logger.log_info("All task completed. Here are the results:")
+
+    for result in results:
+        logger.log_info("\nResult:")
+        logger.log(Markdown(result))
+
+def main():
+    # normal_chat()
+    asyncio.run(async_chat(["1+2+...+10=?", "1+2+4+...+128=?", "1+1/2+1/4+...=?"]))       
 
 if __name__ == "__main__":
     main()

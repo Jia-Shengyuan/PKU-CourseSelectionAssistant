@@ -1,14 +1,15 @@
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 import openai
 from .settings import LLM_Settings
 import json
 from typing import List, Dict, Generator, AsyncGenerator, Optional
 from logger.logger import Logger
+from abc import abstractmethod
 
-class LLM_API:
+class BaseLLM:
 
     def __init__(self, settings : Optional[LLM_Settings] = None, logger : Optional[Logger] = None):
-
+       
         # If settings is not provided, then read from config.json
         if settings is None:
             settings = LLM_Settings()
@@ -24,29 +25,36 @@ class LLM_API:
         self.logger = logger or Logger()
 
         if not settings.model_name:
-            self.logger.log_error("Model name is not given")
+            self.logger.log_error("Model name is empty!")
             return
         
         if not settings.base_url:
-            self.logger.log_error("Base URL is not set")
+            self.logger.log_error("Base URL is empty!")
             return
         
         if not settings.api_key:
-            self.logger.log_error("API key is not set")
+            self.logger.log_error("API key is empty!")
             return
         
         self.logger.log_info(f'url = "{settings.base_url}", model = {settings.model_name}, stream = {settings.stream}')
-        
+
+        self.settings = settings
+        self.client : OpenAI | AsyncOpenAI = None
+
+    @abstractmethod
+    def chat(self, messages : List[Dict[str, str]]) -> Generator[str, None, None] | AsyncGenerator[str, None]:
+        pass
+
+class LLM(BaseLLM):
+
+    def __init__(self, settings : Optional[LLM_Settings] = None, logger : Optional[Logger] = None):
+        super().__init__(settings, logger)
         self.client = OpenAI(
             base_url = settings.base_url,
             api_key = settings.api_key
         )
 
-        self.settings = settings
-
     def chat(self, messages : List[Dict[str, str]]) -> Generator[str, None, None]:
-
-        # self.logger.log_info(f"received chat request, stream = {self.settings.stream}")
 
         try:
             response = self.client.chat.completions.create(
@@ -70,10 +78,19 @@ class LLM_API:
         except Exception as e:
             self.logger.log_error(e)
             return "Error: Unable to chat with LLM"
+                
+
+class AsyncLLM(BaseLLM):
+
+    def __init__(self, settings : Optional[LLM_Settings] = None, logger : Optional[Logger] = None):
+        super().__init__(settings, logger)
+        self.client = AsyncOpenAI(
+            base_url = settings.base_url,
+            api_key = settings.api_key
+        )
+
+    async def chat(self, messages: List[Dict[str, str]]) -> AsyncGenerator[str, None]:
         
-
-    async def achat(self, messages: List[Dict[str, str]]) -> AsyncGenerator[str, None]:
-
         try:
             response = await self.client.chat.completions.create(
                 model=self.settings.model_name,
@@ -96,4 +113,3 @@ class LLM_API:
         except Exception as e:
             self.logger.log_error(e)
             yield "Error: Unable to chat with LLM"
-        
