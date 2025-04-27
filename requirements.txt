@@ -3,3 +3,7 @@ pdfplumber
 uvicorn
 pydantic
 sqlalchemy
+bs4
+pandas
+openai
+rich

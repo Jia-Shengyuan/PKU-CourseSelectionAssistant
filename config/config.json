@@ -1,9 +1,12 @@
 {
     
     "model": {
-        "url": "https://api.siliconflow.cn/v1/chat/completions",
-        "model": "deepseek-ai/DeepSeek-V3",
-        "temperature": 0.7
+        "base_url": "https://api.siliconflow.cn/v1/",
+        "model_name": "deepseek-ai/DeepSeek-V3",
+        "api_key": "API Key here",
+        "temperature": 0.7,
+        "top_p": 0.95,
+        "stream": true
     },
 
     "user": {
