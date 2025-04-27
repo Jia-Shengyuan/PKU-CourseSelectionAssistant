@@ -41,3 +41,9 @@ result = get_courses()
 - `scripts/search_in_pdf.py` 依赖 `pdfplumber` 库，需要自行安装，或者运行 `pip install -r requirements.txt`
 
 后续还需要进行一些输入预处理和异常处理机制的完善
+
+### 模型调用
+
+- 先在 `config/config.json` 配置模型
+- 之后可以在 `src` 文件夹中的 `chat_example.py` 可以用来测试
+- 调用 `LLM_API` 的 `chat` 方法即可对话（ `achat` 未测试）
