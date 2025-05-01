@@ -47,3 +47,13 @@ result = get_courses()
 - 先在 `config/config.json` 配置模型
 - 之后可以在 `src` 文件夹中的 `chat_example.py` 可以用来测试
 - 调用 `LLM_API` 的 `chat` 方法即可对话（ `achat` 未测试）
+
+-------
+
+update 2025.5.1 by zcxxnqwq:
+
+已基本实现爬虫功能，devout 的课程列表的搜索结果在 `crawler/all_courses_search_results.html`中，可以用于后续步骤的处理。
+
+目前的爬虫方式是每个课程搜了三条测评（为了方便调试），爬下来洞主的原帖子和全部评论，后续视需要和技术情况会尝试爬得更精简一点。
+
+在慢慢修 login 和爬虫的衔接部分。由于一天只能 login 实验五次，这个战线可能有点长。

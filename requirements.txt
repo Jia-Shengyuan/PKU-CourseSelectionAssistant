@@ -7,3 +7,6 @@ bs4
 pandas
 openai
 rich
+requests
+beautifulsoup4
+html
