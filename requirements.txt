@@ -10,3 +10,4 @@ rich
 requests
 beautifulsoup4
 html
+selenium
