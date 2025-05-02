@@ -18,8 +18,11 @@
     },
 
     "course": {
-        "extra_courses": ["数值分析", "高等数学B2", "普通物理I"],
-        "excluded_courses": ["数值分析"],
+        "extra_courses": [
+            {"name": "数学分析", "class_ids": [1, 3]},
+            {"name": "高等代数", "class_ids": [1, 2]},
+            {"name": "概率论", "class_ids": [1, 4]}
+        ],
         "min_credit": 20,
         "max_credit": 24,
         "preference" : "你可以在这里更详细地描述你的选课偏好（比如偏好给分好的课，除非没得选否则拒绝早八）"
