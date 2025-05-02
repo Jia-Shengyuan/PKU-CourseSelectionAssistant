@@ -5,6 +5,7 @@ from app.models.course import Course
 from app.db.base import Base
 from app.schemas.course_schema import CourseCreate
 from app.crud.course_crud import create_course
+from scripts.load_config import load_semester
 
 Base.metadata.create_all(bind=engine)
 
@@ -51,4 +52,5 @@ def import_courses(file_path: str):
     print(f"✅ 成功导入 {count} 门课程")
 
 if __name__ == "__main__":
-    import_courses("data/2024-2025-2.xlsx")
+    semester = load_semester()
+    import_courses("data/" + semester + ".xlsx")
