@@ -8,6 +8,11 @@ pandas
 openai
 rich
 requests
-beautifulsoup4
 html
 selenium
+time
+sys
+os
+json
+pickle
+urllib
