@@ -1,18 +1,10 @@
 # PKU Course Selection Assistant
 
-I have changed the name for this project, please clone it again.
-
-`pre_process.py` is used to extract visible text from HTML content, you can try it with `test.html`. It seems to be that running that code will cause warnings, maybe you can ask AIs to fix it.
-
-`api-call.py` is used to call the API of DeepSeek, note that you need to fill the API_KEY value in code before using it.
-
----
-
 update 2025.4.24 by devout:
 
 读取所需要的课程并在数据库查找的基础功能已经基本实现
 
-### 文件信息
+# 文件信息
 
 - `app.models` 和 `app.schemas` 下存储的是课程的格式规范，使用 Pydantic 实现，如果有需要 Pydantic 可以直接生成对应的 json 文件
 
@@ -42,13 +34,15 @@ result = get_courses()
 
 后续还需要进行一些输入预处理和异常处理机制的完善
 
-### 模型调用
+# LLM 调用
 
 - 先在 `config/config.json` 配置模型
 - 之后可以在 `src` 文件夹中的 `chat_example.py` 可以用来测试
 - 调用 `LLM_API` 的 `chat` 方法即可对话（ `achat` 未测试）
 
 -------
+
+# 树洞信息获取
 
 update 2025.5.1 by zcxxnqwq:
 
@@ -57,3 +51,17 @@ update 2025.5.1 by zcxxnqwq:
 目前的爬虫方式是每个课程搜了三条测评（为了方便调试），爬下来洞主的原帖子和全部评论，后续视需要和技术情况会尝试爬得更精简一点。
 
 在慢慢修 login 和爬虫的衔接部分。由于一天只能 login 实验五次，这个战线可能有点长。
+
+# 前端（UI）
+
+## 项目结构
+```
+选课辅助系统/
+├── ui/                # 前端项目目录
+│   └── README.md     # [前端项目说明](./ui/README.md)
+├── ...               # 其他目录
+└── README.md         # 项目说明
+```
+
+## 前端项目
+前端项目使用 Vue 3 + Element Plus 构建，详细说明请参见 [前端项目文档](./ui/README.md)。
