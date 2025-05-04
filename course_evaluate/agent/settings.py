@@ -14,7 +14,7 @@ class LLM_Settings:
         stream : Optional[bool] = None
     ):
         
-        json_config = json.load(open("config/config.json", "r", encoding="utf-8"))["model"]
+        json_config = json.load(open("config/config.example.json", "r", encoding="utf-8"))["model"]
         self.model_name = model_name or json_config["model_name"]
         self.base_url = base_url or json_config["base_url"]
         self.api_key = api_key or json_config["api_key"]
