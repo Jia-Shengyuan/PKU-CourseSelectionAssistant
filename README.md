@@ -52,6 +52,17 @@ update 2025.5.1 by zcxxnqwq:
 
 在慢慢修 login 和爬虫的衔接部分。由于一天只能 login 实验五次，这个战线可能有点长。
 
+# 课程评分器
+
+## 使用方法:
+`import course_evaluate.evaluator.evaluator as evaluator` 
+`evaluator.evaluate_jason_file("path_to_json_file")`
+
+便可依据`course_evaluate/comments_X.json`文件生成`coure_reviews.json`文件
+## 样例:
+运行根目录下的`test_evaluator.py`
+
+
 # 前端（UI）
 
 ## 项目结构
