@@ -10,7 +10,10 @@ const formData = reactive({
   userDescription: '',
   apiProvider: 'https://api.siliconflow.cn/v1/',
   modelName: 'deepseek-ai/DeepSeek-V3',
-  apiKey: ''
+  apiKey: '',
+  temperature: 0.7,
+  topP: 0.9,
+  stream: true
 })
 
 // 课程列表数据
@@ -305,6 +308,30 @@ const savePreference = () => {
             </el-form-item>
           </el-col>
         </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="温度">
+              <el-slider
+                v-model="formData.temperature"
+                :min="0"
+                :max="1"
+                :step="0.01"
+                :format-tooltip="value => value.toFixed(2)"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Top P">
+              <el-slider
+                v-model="formData.topP"
+                :min="0"
+                :max="1"
+                :step="0.01"
+                :format-tooltip="value => value.toFixed(2)"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -347,16 +374,16 @@ const savePreference = () => {
             <el-table-column prop="time" label="上课时间" />
             <el-table-column prop="location" label="上课地点" />
             <el-table-column label="操作" width="200">
-              <template #default="scope">
+          <template #default="scope">
                 <el-button type="primary" size="small" @click="showEditCourseDialog(courseIndex, scope.$index)">
-                  编辑
-                </el-button>
+              编辑
+            </el-button>
                 <el-button type="danger" size="small" @click="deleteClass(courseIndex, scope.$index)">
-                  删除
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
+              删除
+            </el-button>
+          </template>
+        </el-table-column>
+      </el-table>
         </el-collapse-item>
       </el-collapse>
     </el-card>
@@ -619,5 +646,13 @@ body {
 
 .credits-input :deep(.el-input-number) {
   width: 120px;
+}
+
+:deep(.el-slider) {
+  margin-top: 8px;
+}
+
+:deep(.el-slider__runway) {
+  margin: 16px 0;
 }
 </style>

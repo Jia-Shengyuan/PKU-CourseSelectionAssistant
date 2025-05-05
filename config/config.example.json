@@ -18,7 +18,7 @@
     },
 
     "course": {
-        "extra_courses": [
+        "course_list": [
             {"name": "数学分析", "class_ids": [1, 3]},
             {"name": "高等代数", "class_ids": [1, 2]},
             {"name": "概率论", "class_ids": [1, 4]}
