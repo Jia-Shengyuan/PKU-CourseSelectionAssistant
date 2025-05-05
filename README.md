@@ -56,7 +56,7 @@ update 2025.5.1 by zcxxnqwq:
 
 ## 使用方法:
 `import course_evaluate.evaluator.evaluator as evaluator` 
-`evaluator.evaluate_jason_file("path_to_json_file")`
+`evaluator.evaluate_json_file("path_to_json_file")`
 
 便可依据`course_evaluate/comments_X.json`文件生成`coure_reviews.json`文件
 ## 样例:
