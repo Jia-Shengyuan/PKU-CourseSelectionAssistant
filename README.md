@@ -1,5 +1,22 @@
 # PKU Course Selection Assistant
 
+## 项目运行
+
+项目的运行需要同时启用前后端
+
+启动后端：
+```bash
+uvicorn api.api:app --reload
+```
+
+启动前端（需要新开一个终端，后端的不关）：
+```bash
+cd ui
+pnpm run dev
+```
+
+---
+
 update 2025.4.24 by devout:
 
 读取所需要的课程并在数据库查找的基础功能已经基本实现
