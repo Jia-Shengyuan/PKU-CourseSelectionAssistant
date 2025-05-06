@@ -1,6 +1,8 @@
 <script setup>
-import { ref, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import axios from 'axios'
+import { fetchCourseRawInfo } from '@/api/course'
 
 // 配置信息
 const formData = reactive({
@@ -16,37 +18,19 @@ const formData = reactive({
   stream: true
 })
 
-// 课程列表数据
-const courses = ref([
+const courses_raw = ref([
   {
-    name: '高等数学',
-    classes: [
-      {
-        id: 1,
-        teacher: '张老师',
-        time: '周一 1-2节',
-        location: '理教101'
-      },
-      {
-        id: 2,
-        teacher: '李老师',
-        time: '周二 3-4节',
-        location: '理教102'
-      }
-    ]
-  },
+    name: '数学分析',
+    class_ids: [1, 2]
+  }, 
   {
-    name: '大学物理',
-    classes: [
-      {
-        id: 3,
-        teacher: '王老师',
-        time: '周三 3-4节',
-        location: '理教201'
-      }
-    ]
+    name: '高等代数',
+    class_ids: [3]
   }
 ])
+
+// 课程列表数据
+const courses = ref([])
 
 // 添加课程对话框
 const addCourseDialogVisible = ref(false)
@@ -245,8 +229,23 @@ const handleFileImport = (file) => {
 
 // 保存选课倾向
 const savePreference = () => {
-  ElMessage.success('保存成功')
+  ElMessage.success('保存成功（未实现）')
 }
+
+// 获取课程信息
+const fetchCourseInfo = async () => {
+  try {
+    courses.value = await fetchCourseRawInfo(courses_raw.value)
+  } catch (error) {
+    console.error('获取课程信息失败:', error)
+    ElMessage.error('获取课程信息失败')
+  }
+}
+
+// 在组件挂载时获取课程信息
+onMounted(() => {
+  fetchCourseInfo()
+})
 </script>
 
 <template>
@@ -310,7 +309,7 @@ const savePreference = () => {
         </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="温度">
+            <el-form-item label="模型温度">
               <el-slider
                 v-model="formData.temperature"
                 :min="0"
@@ -321,7 +320,7 @@ const savePreference = () => {
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="Top P">
+            <el-form-item label="模型 Top P">
               <el-slider
                 v-model="formData.topP"
                 :min="0"

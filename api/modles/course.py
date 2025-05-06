@@ -2,11 +2,12 @@ from pydantic import BaseModel
 from typing import Optional
 
 class CourseSearchRequest(BaseModel):
-    course_name: str
+    name: str
     class_id: Optional[int] = None
+    teacher: Optional[str] = None
 
-class Course:
-    course_name: str
+class Course(BaseModel):
+    name: str
     class_id: int
     teacher: str
     credit: int

@@ -3,7 +3,7 @@ import openai
 from .settings import LLM_Settings
 import json
 from typing import List, Dict, Generator, AsyncGenerator, Optional
-from logger.logger import Logger
+from src.logger.logger import Logger
 from abc import abstractmethod
 
 class BaseLLM:
