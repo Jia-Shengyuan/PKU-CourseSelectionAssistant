@@ -3,18 +3,18 @@
     "model": {
         "base_url": "https://api.siliconflow.cn/v1/",
         "model_name": "deepseek-ai/DeepSeek-V3",
-        "api_key": "API Key Here",
+        "api_key": "",
         "temperature": 0.7,
         "top_p": 0.95,
         "stream": true
     },
 
     "user": {
-        "student_id": "your student id",
-        "portal_password": "your portal password",
+        "student_id": "",
+        "portal_password": "",
         "semester": "2024-2025-2",
         "grade": "大一下",
-        "introduction": "你可以在这里介绍你自己，说人话即可，这会帮助AI选择更符合你特点的课程"
+        "introduction": ""
     },
 
     "course": {
@@ -25,7 +25,7 @@
         ],
         "min_credit": 20,
         "max_credit": 24,
-        "preference" : "你可以在这里更详细地描述你的选课偏好（比如偏好给分好的课，除非没得选否则拒绝早八）"
+        "preference" : ""
     }
 
 }

@@ -1,6 +1,5 @@
 import axios from 'axios'
-
-const BASE_URL = 'http://localhost:8000'
+import { BASE_URL } from '@/config'
 
 /**
  * 获取单个课程信息
@@ -15,6 +14,23 @@ export const fetchSingleCourse = async (course_name, class_id = null, teacher = 
             name: course_name,
             class_id: class_id,
             teacher: teacher
+        })
+        return response.data
+    } catch (error) {
+        console.error('获取课程信息失败:', error)
+        throw error
+    }
+}
+
+/**
+ * 获取所有课程信息
+ * @param {string} course_name - 课程名称
+ * @returns {Promise<Array>} 返回课程信息数组
+ */
+export const fetchAllCourseOfName = async (course_name) => {
+    try {
+        const response = await axios.post(`${BASE_URL}/course/info`, {
+            name: course_name
         })
         return response.data
     } catch (error) {

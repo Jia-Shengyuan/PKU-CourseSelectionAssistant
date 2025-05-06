@@ -1,14 +1,16 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
-import { fetchCourseRawInfo } from '@/api/course'
+import { fetchCourseRawInfo, fetchAllCourseOfName, fetchSingleCourse } from '@/api/course'
+import { getConfig, saveConfig } from '@/api/config'
 
 // 配置信息
 const formData = reactive({
   studentId: '',
   password: '',
   grade: '',
+  semester: '',
   userDescription: '',
   apiProvider: 'https://api.siliconflow.cn/v1/',
   modelName: 'deepseek-ai/DeepSeek-V3',
@@ -25,7 +27,11 @@ const courses_raw = ref([
   }, 
   {
     name: '高等代数',
-    class_ids: [3]
+    class_ids: [2]
+  },
+  {
+    name: '恨基础',
+    class_ids: [1, 4]
   }
 ])
 
@@ -62,6 +68,19 @@ const activeNames = ref([]) // 控制折叠面板的展开状态
 const coursePreference = ref('') // 选课倾向
 const minCredits = ref(0) // 最少学分
 const maxCredits = ref(0) // 最多学分
+
+// 添加班级对话框
+const addClassDialogVisible = ref(false)
+const addingCourseIndex = ref(-1)
+const newClass = reactive({
+  class_id: '',
+  teacher: ''
+})
+
+// 计算当前正在添加班级的课程名称
+const addingCourseName = computed(() => {
+  return courses.value[addingCourseIndex.value]?.name || ''
+})
 
 // 处理最低学分变化
 const handleMinCreditsChange = (value) => {
@@ -107,41 +126,115 @@ const showEditCourseDialog = (courseIndex, classIndex) => {
 }
 
 // 添加课程（如"数学分析"）
-const addCourse = () => {
+const addCourse = async () => {
   if (!newCourse.name) {
     ElMessage.warning('请输入课程名称')
     return
   }
-  // 自动添加一个样例班级
-  const newId = Math.max(...courses.value.flatMap(c => c.classes.map(cl => cl.id)), 0) + 1
-  courses.value.push({
-    name: newCourse.name,
-    classes: [{
-      id: newId,
-      teacher: '待设置',
-      time: '待设置',
-      location: '待设置'
-    }]
-  })
-  addCourseDialogVisible.value = false
-  ElMessage.success('添加成功')
+
+  // 检查课程是否已存在
+  if (courses.value.some(course => course.name === newCourse.name)) {
+    ElMessage.warning(`课程"${newCourse.name}"已存在`)
+    return
+  }
+
+  try {
+    // 从API获取课程信息
+    const courseData = await fetchAllCourseOfName(newCourse.name)
+    
+    if (!courseData || courseData.length === 0) {
+      ElMessage.warning(`未找到课程"${newCourse.name}"的信息`)
+      return
+    }
+
+    // 将API返回的数据转换为前端需要的格式
+    const newCourseData = {
+      name: courseData[0].name,
+      classes: courseData.map(course => ({
+        id: course.class_id,
+        teacher: course.teacher,
+        time: course.time,
+        location: course.location
+      }))
+    }
+
+    // 添加到课程列表
+    courses.value.push(newCourseData)
+    
+    // 自动展开新添加的课程
+    const newIndex = courses.value.length - 1
+    if (!activeNames.value.includes(newIndex)) {
+      activeNames.value.push(newIndex)
+    }
+
+    addCourseDialogVisible.value = false
+    ElMessage.success('添加成功')
+  } catch (error) {
+    console.error('添加课程失败:', error)
+    ElMessage.error('添加课程失败')
+  }
 }
 
 // 添加班级（如"高等数学 王老师班"）
 const addClass = (courseIndex) => {
-  const course = courses.value[courseIndex]
-  const newId = Math.max(...course.classes.map(c => c.id), 0) + 1
-  // 打开编辑对话框
-  editingCourseIndex.value = courseIndex
-  editingClassIndex.value = course.classes.length
-  editingCourse.name = course.name
-  editingCourse.classes = [{
-    id: newId,
-    teacher: '',
-    time: '',
-    location: ''
-  }]
-  editCourseDialogVisible.value = true
+  addingCourseIndex.value = courseIndex
+  // 清空表单
+  newClass.class_id = ''
+  newClass.teacher = ''
+  addClassDialogVisible.value = true
+}
+
+// 确认添加班级
+const confirmAddClass = async () => {
+  if (!newClass.class_id && !newClass.teacher) {
+    ElMessage.warning('请输入班级编号或教师名称')
+    return
+  }
+
+  const course = courses.value[addingCourseIndex.value]
+  
+  try {
+    // 从API获取课程信息
+    const courseData = await fetchSingleCourse(
+      course.name,
+      newClass.class_id ? parseInt(newClass.class_id) : null,
+      newClass.teacher || null
+    )
+    
+    if (!courseData || courseData.length === 0) {
+      ElMessage.warning('未找到匹配的班级信息')
+      return
+    }
+
+    // 检查班级是否已存在
+    const classExists = course.classes.some(c => 
+      c.id === courseData[0].class_id || c.teacher === courseData[0].teacher
+    )
+    
+    if (classExists) {
+      ElMessage.warning('该班级已存在')
+      return
+    }
+
+    // 添加新班级
+    course.classes.push({
+      id: courseData[0].class_id,
+      teacher: courseData[0].teacher,
+      time: courseData[0].time,
+      location: courseData[0].location
+    })
+
+    // 自动展开该课程
+    if (!activeNames.value.includes(addingCourseIndex.value)) {
+      activeNames.value.push(addingCourseIndex.value)
+    }
+
+    addClassDialogVisible.value = false
+    ElMessage.success('添加成功')
+  } catch (error) {
+    console.error('添加班级失败:', error)
+    ElMessage.error('添加班级失败')
+  }
 }
 
 // 编辑班级
@@ -228,8 +321,75 @@ const handleFileImport = (file) => {
 }
 
 // 保存选课倾向
-const savePreference = () => {
-  ElMessage.success('保存成功（未实现）')
+const savePreference = async () => {
+  try {
+    const config = {
+      model: {
+        base_url: formData.apiProvider,
+        model_name: formData.modelName,
+        api_key: formData.apiKey,
+        temperature: formData.temperature,
+        top_p: formData.topP,
+        stream: formData.stream
+      },
+      user: {
+        student_id: formData.studentId,
+        portal_password: formData.password,
+        grade: formData.grade,
+        semester: formData.semester,
+        introduction: formData.userDescription
+      },
+      course: {
+        course_list: courses.value.map(course => ({
+          name: course.name,
+          class_ids: course.classes.map(c => parseInt(c.id))
+        })),
+        min_credit: minCredits.value,
+        max_credit: maxCredits.value,
+        preference: coursePreference.value
+      }
+    }
+    
+    await saveConfig(config)
+    ElMessage.success('保存成功')
+  } catch (error) {
+    console.error('保存配置失败:', error)
+    ElMessage.error('保存失败')
+  }
+}
+
+// 加载配置
+const loadConfig = async () => {
+  try {
+    const config = await getConfig()
+    
+    // 更新表单数据
+    formData.apiProvider = config.model.base_url
+    formData.modelName = config.model.model_name
+    formData.apiKey = config.model.api_key
+    formData.temperature = config.model.temperature
+    formData.topP = config.model.top_p
+    formData.stream = config.model.stream
+    
+    formData.studentId = config.user.student_id
+    formData.password = config.user.portal_password
+    formData.grade = config.user.grade
+    formData.semester = config.user.semester
+    formData.userDescription = config.user.introduction
+
+    courses.value = await fetchCourseRawInfo(config.course.course_list)
+    
+    // 更新学分和偏好
+    minCredits.value = config.course.min_credit
+    maxCredits.value = config.course.max_credit
+    coursePreference.value = config.course.preference
+    
+    // 获取课程详细信息
+    // await fetchCourseInfo()
+  } catch (error) {
+    console.error('加载配置失败:', error)
+    ElMessage.error('加载配置失败')
+  }
 }
 
 // 获取课程信息
@@ -242,9 +402,10 @@ const fetchCourseInfo = async () => {
   }
 }
 
-// 在组件挂载时获取课程信息
+// 在组件挂载时加载配置
 onMounted(() => {
-  fetchCourseInfo()
+  // fetchCourseInfo() is replaced by loadConfig()
+  loadConfig()
 })
 </script>
 
@@ -273,6 +434,11 @@ onMounted(() => {
           <el-col :span="8">
             <el-form-item label="年级">
               <el-input v-model="formData.grade" placeholder="请输入年级（如大一下）" />
+            </el-form-item>
+          </el-col>
+          <el-col :span="8">
+            <el-form-item label="当前学期">
+              <el-input v-model="formData.semester" placeholder="请输入当前学期（如2024-2025-2）" />
             </el-form-item>
           </el-col>
         </el-row>
@@ -320,7 +486,7 @@ onMounted(() => {
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="模型 Top P">
+            <el-form-item label="Top P">
               <el-slider
                 v-model="formData.topP"
                 :min="0"
@@ -464,6 +630,35 @@ onMounted(() => {
         <span class="dialog-footer">
           <el-button @click="editCourseDialogVisible = false">取消</el-button>
           <el-button type="primary" @click="editClass">确定</el-button>
+        </span>
+      </template>
+    </el-dialog>
+
+    <!-- 添加班级对话框 -->
+    <el-dialog v-model="addClassDialogVisible" title="添加班级" width="500px">
+      <el-form :model="newClass" label-width="100px">
+        <el-form-item label="课程名称">
+          <el-input :value="addingCourseName" disabled />
+        </el-form-item>
+        <el-form-item label="班级编号">
+          <el-input v-model="newClass.class_id" placeholder="请输入班级编号（可选）" />
+        </el-form-item>
+        <el-form-item label="教师名称">
+          <el-input v-model="newClass.teacher" placeholder="请输入教师名称（可选）" />
+        </el-form-item>
+        <el-form-item>
+          <el-alert
+            title="提示：只需填写班级编号或教师名称其中之一即可"
+            type="info"
+            :closable="false"
+            show-icon
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="addClassDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="confirmAddClass">确定</el-button>
         </span>
       </template>
     </el-dialog>
