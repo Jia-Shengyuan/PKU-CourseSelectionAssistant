@@ -93,7 +93,7 @@ class Evaluator:
         except Exception as e:
             logger.log_error(f"发生错误: {str(e)}")
 
-def evaluate_jason_file(json_file = "course_evaluate\comments.json"):
+def evaluate_json_file(json_file = "course_evaluate\comments.json"):
     # 指定JSON文件路径（根据实际情况修改）
     
     # 从JSON提取数据
