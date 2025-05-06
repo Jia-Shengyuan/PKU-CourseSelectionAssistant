@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
-import { fetchCourseRawInfo, fetchAllCourseOfName, fetchSingleCourse } from '@/api/course'
+import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray } from '@/api/course'
 import { getConfig, saveConfig } from '@/api/config'
 
 // 配置信息
@@ -20,21 +20,6 @@ const formData = reactive({
   stream: true
 })
 
-const courses_raw = ref([
-  {
-    name: '数学分析',
-    class_ids: [1, 2]
-  }, 
-  {
-    name: '高等代数',
-    class_ids: [2]
-  },
-  {
-    name: '恨基础',
-    class_ids: [1, 4]
-  }
-])
-
 // 课程列表数据
 const courses = ref([])
 
@@ -42,12 +27,8 @@ const courses = ref([])
 const addCourseDialogVisible = ref(false)
 const newCourse = reactive({
   name: '',
-  classes: [{
-    id: '',
-    teacher: '',
-    time: '',
-    location: ''
-  }]
+  teacher: '',
+  class_id: ''
 })
 
 // 编辑课程对话框
@@ -101,12 +82,8 @@ const showAddCourseDialog = () => {
   addCourseDialogVisible.value = true
   // 清空表单
   newCourse.name = ''
-  newCourse.classes = [{
-    id: '',
-    teacher: '',
-    time: '',
-    location: ''
-  }]
+  newCourse.class_id = ''
+  newCourse.teacher = ''
 }
 
 // 显示编辑课程对话框
@@ -140,7 +117,11 @@ const addCourse = async () => {
 
   try {
     // 从API获取课程信息
-    const courseData = await fetchAllCourseOfName(newCourse.name)
+    const courseData = await fetchCourse(
+      newCourse.name,
+      newCourse.class_id ? parseInt(newCourse.class_id) : null,
+      newCourse.teacher || null
+    )
     
     if (!courseData || courseData.length === 0) {
       ElMessage.warning(`未找到课程"${newCourse.name}"的信息`)
@@ -149,9 +130,9 @@ const addCourse = async () => {
 
     // 将API返回的数据转换为前端需要的格式
     const newCourseData = {
-      name: courseData[0].name,
+      name: newCourse.name,
       classes: courseData.map(course => ({
-        id: course.class_id,
+        id: course.class_id.toString(),
         teacher: course.teacher,
         time: course.time,
         location: course.location
@@ -168,7 +149,7 @@ const addCourse = async () => {
     }
 
     addCourseDialogVisible.value = false
-    ElMessage.success('添加成功')
+    ElMessage.success(`成功添加课程"${newCourse.name}"，包含${courseData.length}个班级`)
   } catch (error) {
     console.error('添加课程失败:', error)
     ElMessage.error('添加课程失败')
@@ -186,16 +167,11 @@ const addClass = (courseIndex) => {
 
 // 确认添加班级
 const confirmAddClass = async () => {
-  if (!newClass.class_id && !newClass.teacher) {
-    ElMessage.warning('请输入班级编号或教师名称')
-    return
-  }
-
   const course = courses.value[addingCourseIndex.value]
   
   try {
     // 从API获取课程信息
-    const courseData = await fetchSingleCourse(
+    const courseData = await fetchCourse(
       course.name,
       newClass.class_id ? parseInt(newClass.class_id) : null,
       newClass.teacher || null
@@ -206,23 +182,25 @@ const confirmAddClass = async () => {
       return
     }
 
-    // 检查班级是否已存在
-    const classExists = course.classes.some(c => 
-      c.id === courseData[0].class_id || c.teacher === courseData[0].teacher
+    // 过滤掉已存在的班级
+    const newClasses = courseData.filter(courseInfo => 
+      !course.classes.some(c => 
+        c.id === courseInfo.class_id.toString() || c.teacher === courseInfo.teacher
+      )
     )
-    
-    if (classExists) {
-      ElMessage.warning('该班级已存在')
+
+    if (newClasses.length === 0) {
+      ElMessage.warning('所有匹配的班级都已存在')
       return
     }
 
     // 添加新班级
-    course.classes.push({
-      id: courseData[0].class_id,
-      teacher: courseData[0].teacher,
-      time: courseData[0].time,
-      location: courseData[0].location
-    })
+    course.classes.push(...newClasses.map(courseInfo => ({
+      id: courseInfo.class_id.toString(),
+      teacher: courseInfo.teacher,
+      time: courseInfo.time,
+      location: courseInfo.location
+    })))
 
     // 自动展开该课程
     if (!activeNames.value.includes(addingCourseIndex.value)) {
@@ -230,7 +208,7 @@ const confirmAddClass = async () => {
     }
 
     addClassDialogVisible.value = false
-    ElMessage.success('添加成功')
+    ElMessage.success(`成功添加${newClasses.length}个班级`)
   } catch (error) {
     console.error('添加班级失败:', error)
     ElMessage.error('添加班级失败')
@@ -305,19 +283,27 @@ const handleConfirm = () => {
 }
 
 // 处理文件导入
-const handleFileImport = (file) => {
-  const courseName = file.name.split('.')[0]
-  const newId = courses.value.length + 1
-  courses.value.push({
-    name: courseName,
-    classes: [{
-      id: newId,
-      teacher: '待设置',
-      time: '待设置',
-      location: '待设置'
-    }]
-  })
-  ElMessage.success(`成功导入培养方案：${courseName}`)
+const handleFileImport = async (file) => {
+  try {
+    // 获取课程列表
+    const courseData = await fetchCourseByPlan(
+      formData.semester,
+      formData.grade,
+      file.name
+    )
+    
+    if (!courseData || courseData.length === 0) {
+      ElMessage.warning('未找到课程信息')
+      return
+    }
+
+    courses.value = courseDataToMapArray(courseData)
+    ElMessage.success(`成功导入培养方案：${file.name}`)
+   
+  } catch (error) {
+    console.error('导入培养方案失败:', error)
+    ElMessage.error('导入培养方案失败')
+  }
 }
 
 // 保存选课倾向
@@ -389,16 +375,6 @@ const loadConfig = async () => {
   } catch (error) {
     console.error('加载配置失败:', error)
     ElMessage.error('加载配置失败')
-  }
-}
-
-// 获取课程信息
-const fetchCourseInfo = async () => {
-  try {
-    courses.value = await fetchCourseRawInfo(courses_raw.value)
-  } catch (error) {
-    console.error('获取课程信息失败:', error)
-    ElMessage.error('获取课程信息失败')
   }
 }
 
@@ -594,9 +570,23 @@ onMounted(() => {
 
     <!-- 添加课程对话框 -->
     <el-dialog v-model="addCourseDialogVisible" title="添加课程" width="500px">
-      <el-form :model="newCourse" label-width="80px">
-        <el-form-item label="课程名称">
+      <el-form :model="newCourse" label-width="100px">
+        <el-form-item label="课程名称" required>
           <el-input v-model="newCourse.name" placeholder="请输入课程名称" />
+        </el-form-item>
+        <el-form-item label="教师名称">
+          <el-input v-model="newCourse.teacher" placeholder="请输入教师名称（选填）" />
+        </el-form-item>
+        <el-form-item label="班级编号">
+          <el-input v-model="newCourse.class_id" placeholder="请输入班级编号（选填）" />
+        </el-form-item>
+        <el-form-item>
+          <el-alert
+            title="选填为筛选条件，将添加所有符合条件的班级"
+            type="info"
+            :closable="false"
+            show-icon
+          />
         </el-form-item>
       </el-form>
       <template #footer>
@@ -641,14 +631,14 @@ onMounted(() => {
           <el-input :value="addingCourseName" disabled />
         </el-form-item>
         <el-form-item label="班级编号">
-          <el-input v-model="newClass.class_id" placeholder="请输入班级编号（可选）" />
+          <el-input v-model="newClass.class_id" placeholder="请输入班级编号（选填）" />
         </el-form-item>
         <el-form-item label="教师名称">
-          <el-input v-model="newClass.teacher" placeholder="请输入教师名称（可选）" />
+          <el-input v-model="newClass.teacher" placeholder="请输入教师名称（选填）" />
         </el-form-item>
         <el-form-item>
           <el-alert
-            title="提示：只需填写班级编号或教师名称其中之一即可"
+            title="以上为筛选条件，将添加所有符合条件的班级"
             type="info"
             :closable="false"
             show-icon

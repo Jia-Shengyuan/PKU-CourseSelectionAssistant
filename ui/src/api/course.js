@@ -2,13 +2,13 @@ import axios from 'axios'
 import { BASE_URL } from '@/config'
 
 /**
- * 获取单个课程信息
+ * 获取所有满足筛选条件的课程信息
  * @param {string} course_name - 课程名称
  * @param {number|null} [class_id=null] - 课程编号，可选
  * @param {string|null} [teacher=null] - 教师姓名，可选
  * @returns {Promise<Array>} 返回课程信息数组
  */
-export const fetchSingleCourse = async (course_name, class_id = null, teacher = null) => {
+export const fetchCourse = async (course_name, class_id = null, teacher = null) => {
     try {
         const response = await axios.post(`${BASE_URL}/course/info`, {
             name: course_name,
@@ -23,24 +23,7 @@ export const fetchSingleCourse = async (course_name, class_id = null, teacher = 
 }
 
 /**
- * 获取所有课程信息
- * @param {string} course_name - 课程名称
- * @returns {Promise<Array>} 返回课程信息数组
- */
-export const fetchAllCourseOfName = async (course_name) => {
-    try {
-        const response = await axios.post(`${BASE_URL}/course/info`, {
-            name: course_name
-        })
-        return response.data
-    } catch (error) {
-        console.error('获取课程信息失败:', error)
-        throw error
-    }
-}
-
-/**
- * 批量获取课程信息
+ * 批量获取课程信息，格式为config.json中的course.course_list的格式
  * @param {Array<{name: string, class_ids: Array<number>}>} courses_raw - 课程列表
  * @returns {Promise<Array>} 返回处理后的课程信息数组
  */
@@ -56,38 +39,56 @@ export const fetchCourseRawInfo = async (courses_raw) => {
 
         // 使用Promise.all并行处理所有请求
         const responses = await Promise.all(
-            courseRequests.map(request => fetchSingleCourse(request.name, request.class_id))
+            courseRequests.map(request => fetchCourse(request.name, request.class_id))
         )
-
-        // 将API返回的数据转换为前端需要的格式
-        const courseMap = new Map()
         
-        responses.forEach(response => {
-            // response是一个数组，我们需要取第一个元素
-            const courseData = response[0]
-            if (!courseData || courseData.name === "Not found") {
-                return
-            }
-            
-            if (!courseMap.has(courseData.name)) {
-                courseMap.set(courseData.name, {
-                    name: courseData.name,
-                    classes: []
-                })
-            }
-            
-            courseMap.get(courseData.name).classes.push({
-                id: courseData.class_id,
-                teacher: courseData.teacher,
-                time: courseData.time,
-                location: courseData.location
-            })
-        })
+        // responses : List[List[Course]], 需要转换为List[Course]
+        return courseDataToMapArray(responses.flat())
 
-        // 将Map转换为数组
-        return Array.from(courseMap.values())
     } catch (error) {
         console.error('批量获取课程信息失败:', error)
         throw error
     }
+}
+
+export const fetchCourseByPlan = async (semester, grade, plan_path) => {
+    try {
+        const response = await axios.post(`${BASE_URL}/course/plan`, {
+            semester: semester,
+            grade: grade,
+            plan_path: plan_path
+        })
+        return response.data
+    } catch (error) {
+        console.error('获取课程信息失败:', error)
+        throw error
+    }
+}
+
+export const courseDataToMapArray = (courseData) => {
+
+    const courseMap = new Map()
+    
+    courseData.forEach(course => {
+
+        if(!course || course.name === "Not found") {
+            return
+        }
+
+        if (!courseMap.has(course.name)) {
+            courseMap.set(course.name, {
+                name: course.name,
+                classes: []
+            })
+        }
+        courseMap.get(course.name).classes.push({
+            id: course.class_id.toString(),
+            teacher: course.teacher,
+            time: course.time,
+            location: course.location
+        })
+    })
+
+    return Array.from(courseMap.values())
+
 }

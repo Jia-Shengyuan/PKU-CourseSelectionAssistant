@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
 import json
-from api.models.course import Course, CourseSearchRequest
+from api.models.course import Course, CourseSearchRequest, FetchCourseByPlanRequest
 from api.models.config import ConfigData, CONFIG_PATH
 from typing import List, Dict, Any
 from src.agent.llm import AsyncLLM
@@ -84,6 +84,21 @@ async def get_course_info(course_request: CourseSearchRequest) -> List[Course]:
 
     return list(filtered_courses)
 
+@app.post("/course/plan")
+async def fetch_course_by_plan(fetch_request: FetchCourseByPlanRequest) -> List[Course]:
+    """
+    Fetch course by plan, given semester, grade and plan_path.
+    """
+
+    # Return fake results
+    database = [
+        Course(name="数学分析", class_id=1, teacher="lpd", credit=5, time="1-2节", location="理教101", course_id="1234567890"),
+        Course(name="数学分析", class_id=2, teacher="lwg", credit=5, time="3-4节", location="理教102", course_id="1234567891"),
+        Course(name="高等代数", class_id=1, teacher="wfz", credit=4, time="1-2节", location="二教103", course_id="1234567890"),
+        Course(name="高等代数", class_id=2, teacher="lww", credit=4, time="3-4节", location="二教104", course_id="1234567891"),
+        Course(name="恨基础", class_id=2, teacher="dh", credit=3, time="5-6节", location="二教105", course_id="1234567892"),
+    ]
+    return database
 
 @app.post("/chat")
 async def chat(chat_request: str) -> StreamingResponse:

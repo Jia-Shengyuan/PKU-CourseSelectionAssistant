@@ -6,6 +6,12 @@ class CourseSearchRequest(BaseModel):
     class_id: Optional[int] = None
     teacher: Optional[str] = None
 
+class FetchCourseByPlanRequest(BaseModel):
+    semester: str
+    grade: str
+    plan_path: str
+
+
 class Course(BaseModel):
     name: str
     class_id: int
