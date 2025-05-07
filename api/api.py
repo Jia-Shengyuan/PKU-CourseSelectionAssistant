@@ -9,6 +9,8 @@ from api.models.config import ConfigData, CONFIG_PATH
 from typing import List, Dict, Any
 from src.agent.llm import AsyncLLM
 from src.agent.settings import LLM_Settings
+from app.db.session import SessionLocal
+from scripts.search_in_pdf import extract_courses_from_pdf
 import os
 
 ''' I think this may be the entrance of this project.'''
@@ -65,24 +67,12 @@ async def get_course_info(course_request: CourseSearchRequest) -> List[Course]:
     """
 
     # Fake database
-    database = [
-        Course(name="数学分析", class_id=1, teacher="lpd", credit=5, time="1-2节", location="理教101", course_id="1234567890"),
-        Course(name="数学分析", class_id=2, teacher="lwg", credit=5, time="3-4节", location="理教102", course_id="1234567891"),
-        Course(name="高等代数", class_id=1, teacher="wfz", credit=4, time="1-2节", location="二教103", course_id="1234567890"),
-        Course(name="高等代数", class_id=2, teacher="lww", credit=4, time="3-4节", location="二教104", course_id="1234567891"),
-        Course(name="恨基础", class_id=2, teacher="dh", credit=3, time="5-6节", location="二教105", course_id="1234567892"),
-    ]
+    db = SessionLocal()
 
     print("Get course request : " + str(course_request))
 
     # Fake search results
-    filtered_courses = filter(lambda x: x.name == course_request.name, database)
-    if course_request.class_id is not None:
-        filtered_courses = filter(lambda x: x.class_id == course_request.class_id, filtered_courses)
-    if course_request.teacher is not None:
-        filtered_courses = filter(lambda x: x.teacher == course_request.teacher, filtered_courses)
-
-    return list(filtered_courses)
+    
 
 @app.post("/course/plan")
 async def fetch_course_by_plan(fetch_request: FetchCourseByPlanRequest) -> List[Course]:
@@ -91,14 +81,7 @@ async def fetch_course_by_plan(fetch_request: FetchCourseByPlanRequest) -> List[
     """
 
     # Return fake results
-    database = [
-        Course(name="数学分析", class_id=1, teacher="lpd", credit=5, time="1-2节", location="理教101", course_id="1234567890"),
-        Course(name="数学分析", class_id=2, teacher="lwg", credit=5, time="3-4节", location="理教102", course_id="1234567891"),
-        Course(name="高等代数", class_id=1, teacher="wfz", credit=4, time="1-2节", location="二教103", course_id="1234567890"),
-        Course(name="高等代数", class_id=2, teacher="lww", credit=4, time="3-4节", location="二教104", course_id="1234567891"),
-        Course(name="恨基础", class_id=2, teacher="dh", credit=3, time="5-6节", location="二教105", course_id="1234567892"),
-    ]
-    return database
+    course_names = extract_courses_from_pdf(fetch_request.plan_path, fetch_request.grade, fetch_request.semester) 
 
 @app.post("/chat")
 async def chat(chat_request: str) -> StreamingResponse:
