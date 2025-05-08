@@ -18,19 +18,20 @@ class CourseDataProcessor:
         self.settings = LLM_Settings()
         self.llm = AsyncLLM(self.settings, self.logger)
         
-    async def process_batch(self, df_batch, batch_index):
+    async def process_batch(self, df_batch, batch_index, start_index):
         """处理一批数据"""
         prompt = f"""请帮我处理以下课程信息列表，将其规范化为标准格式。
 要求：
 1. 将上课时间和地点分开
 2. 如果信息在备注中，请提取到对应字段，只在备注中保留确实是备注的信息（习题课时间，考试时间等也算作备注信息）
-3. 保持原有信息不变，只做格式调整
-4. 返回JSON数组格式，每个元素包含以下字段：
+3. 为老师添加姓名拼音缩写以方便检索，有多个老师时用逗号连接，格式形如"王福正/wfz（副教授)，高峡/gx（讲师）"，英文名字不添加缩写，形如"John Smith（助理教授）"即可
+4. 保持其余原有信息不变，只做格式调整
+5. 返回JSON数组格式，每个元素包含以下字段：
    - course_name: str，课程名称
    - course_id: int，课程编号
-   - teacher: str，教师
+   - teacher: str，教师信息
    - class_id: int，班号
-   - time: str，上课时间（格式：单周/每周+周几+第几节，如"每周周一1-2节"，一周有多节课的用逗号连接，如"每周周一1-2节,单周周三5-6节"）
+   - time: str，上课时间（格式：单周/每周+周几+第几节，如"每周周一1-2节"）
    - location: str，上课地点
    - credit: float，学分
    - note: str，备注
@@ -54,6 +55,11 @@ class CourseDataProcessor:
             
             # 解析JSON响应
             processed_data = json.loads(response)
+            
+            # 为每个处理后的数据添加原始索引
+            for i, data in enumerate(processed_data):
+                data['_original_index'] = start_index + i
+                
             return processed_data
 
         except json.JSONDecodeError as e:
@@ -78,16 +84,16 @@ class CourseDataProcessor:
             for i in range(0, total_rows, batch_size):
                 df_batch = df.iloc[i:i+batch_size]
                 batch_index = i // batch_size
-                batches.append((df_batch, batch_index))
+                batches.append((df_batch, batch_index, i))  # 添加起始索引
 
             # 使用信号量控制并发数
             semaphore = asyncio.Semaphore(max_concurrent)
             
             async def process_with_semaphore(batch):
-                df_batch, batch_index = batch
+                df_batch, batch_index, start_index = batch
                 async with semaphore:
                     try:
-                        return await self.process_batch(df_batch, batch_index)
+                        return await self.process_batch(df_batch, batch_index, start_index)
                     except Exception as e:
                         self.logger.log_error(f"处理第{batch_index + 1}批数据时发生错误: {e}")
                         return []
@@ -108,7 +114,15 @@ class CourseDataProcessor:
 
             if not all_processed_data:
                 raise Exception("没有成功处理任何数据")
+
+            # 按原始索引排序
+            all_processed_data.sort(key=lambda x: x['_original_index'])
             
+            # 移除临时索引字段
+            for data in all_processed_data:
+                data.pop('_original_index', None)
+
+            # 保存JSON格式的结果
             with open("data/processed_courses.json", "w", encoding="utf-8") as f:
                 json.dump(all_processed_data, f, ensure_ascii=False)
 
@@ -128,7 +142,7 @@ async def main():
     input_file = "data/2024-2025-2_new.xlsx"
     output_file = "data/processed_courses.xlsx"
     # 可以调整batch_size和max_concurrent参数
-    await processor.process_excel(input_file, output_file, batch_size=32, max_concurrent=16)
+    await processor.process_excel(input_file, output_file, batch_size=32, max_concurrent=40)
 
 if __name__ == "__main__":
     asyncio.run(main())
