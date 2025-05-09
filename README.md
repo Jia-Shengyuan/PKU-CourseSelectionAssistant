@@ -61,13 +61,11 @@ result = get_courses()
 
 # 树洞信息获取
 
-update 2025.5.1 by zcxxnqwq:
+update 2025.5.9 by zcxxnqwq:
 
-已基本实现爬虫功能，devout 的课程列表的搜索结果在 `crawler/all_courses_search_results.html`中，可以用于后续步骤的处理。
+修了爬虫。实现了每门课的测评分别存储在一个 HTML 里，存储在 `crawler` 目录下。
 
-目前的爬虫方式是每个课程搜了三条测评（为了方便调试），爬下来洞主的原帖子和全部评论，后续视需要和技术情况会尝试爬得更精简一点。
-
-在慢慢修 login 和爬虫的衔接部分。由于一天只能 login 实验五次，这个战线可能有点长。
+只存登录 cookies 似乎因为反爬虫机制无法自动登录，以后的每次登录依然需要短信验证码。现采用从 Chrome 用户数据目录直接复用登录态的方法，`config.json` 新增 `chrome_user_data_dir` 用于让用户填写用户目录地址，目前我的电脑上不出错的方式是自己新建文件夹 `C:\Users\用户名\PKU-Chrome-Profile`，在 config 里填写这个路径，然后需要手动登录一次，使这个目录下存储登录状态，之后每次本设备访问树洞无需登录。
 
 # 课程评分器
 

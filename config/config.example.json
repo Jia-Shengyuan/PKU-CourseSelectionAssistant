@@ -14,7 +14,8 @@
         "portal_password": "",
         "semester": "2024-2025-2",
         "grade": "大一下",
-        "introduction": ""
+        "introduction": "",
+        "chrome_user_data_dir":""
     },
 
     "course": {

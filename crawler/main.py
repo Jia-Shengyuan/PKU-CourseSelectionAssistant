@@ -1,8 +1,14 @@
 import os
+import sys
 import time
 from crawler.login import login
 from crawler.search_courses import search_treehole
-from scripts.search_from_config import get_courses
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# from scripts.search_from_config import get_courses
+
+folder_path = "crawler"
 
 def main():
     # 首先登录并获取 driver
@@ -10,27 +16,28 @@ def main():
     
     if driver:
         # course_list=get_courses()
-        time.sleep(3)
-        course_list = ["高等数学 (B) (二)", "普通物理 (Ⅰ)", "数学分析（II）", "高等代数 (II )", "程序设计实习"]
-        
-        # 初始的 HTML 内容
-        html_content = "<html><body><h1>所有课程搜索结果</h1>"
+        time.sleep(2)
+        course_list = ["高等数学 (B) (二)", "普通物理 (Ⅰ)", "数学分析（II）", "高等代数 (II )", "程序设计实习", "人工智能基础", "电磁学", "微电子与电路基础", "电子系统基础训练"]
+
         
         # 遍历课程并更新 HTML 内容
-        for course in course_list:
+        for course in course_list:        
+            # 初始的 HTML 内容
+            html_content = f"<html><body><h1>{course}</h1>"
             html_content = search_treehole(course, driver, html_content)
-        
-        # 完成 HTML 内容
-        html_content += "</body></html>"
-
-        # 保存文件到指定路径
-        folder_path = "crawler"
-        with open(os.path.join(folder_path, "all.html"), "w", encoding="utf-8") as f:
-            f.write(html_content)
-
+            html_content += "</body></html>"
+            safe_course_name = "".join(c for c in course if c.isalnum() or c in (' ', '_')).rstrip()
+            filename = f"{safe_course_name}.html"
+            with open(os.path.join(folder_path, filename), "w", encoding="utf-8") as f:
+                f.write(html_content)
+                
         print("已将所有课程的评论结果保存到 all.html 文件中。")
     else:
         print("登录失败，无法进行搜索。")
 
 if __name__ == "__main__":
     main()
+
+# taskkill /F /IM chrome.exe
+# "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222
+
