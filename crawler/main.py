@@ -8,7 +8,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # from scripts.search_from_config import get_courses
 
-folder_path = "crawler"
+folder_path="crawler"
+data_folder_path = os.path.join(folder_path, "data")
+os.makedirs(data_folder_path, exist_ok=True)
 
 def main():
     # 首先登录并获取 driver
@@ -28,7 +30,7 @@ def main():
             html_content += "</body></html>"
             safe_course_name = "".join(c for c in course if c.isalnum() or c in (' ', '_')).rstrip()
             filename = f"{safe_course_name}.html"
-            with open(os.path.join(folder_path, filename), "w", encoding="utf-8") as f:
+            with open(os.path.join(data_folder_path, filename), "w", encoding="utf-8") as f:
                 f.write(html_content)
                 
         print("已将所有课程的评论结果保存到 all.html 文件中。")

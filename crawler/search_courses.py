@@ -38,7 +38,7 @@ def getshort(course_name):
             ans += element
     return ans.strip()
 
-def search_treehole(course_name, driver, html_content):
+def search_treehole(course_name, driver, html_content,max_len=5):
     course_name_short = getshort(course_name)
     select_name = course_name + " 测评"
     print("!"+course_name_short+"!")
@@ -57,7 +57,7 @@ def search_treehole(course_name, driver, html_content):
         posts = WebDriverWait(driver, 2).until(
             EC.presence_of_all_elements_located((By.XPATH, '//*[@id="table_list"]/div/div'))
         )
-        posts_count = min(len(posts), 5)
+        posts_count = min(len(posts), max_len)
         if posts_count > 0:
             print(f"找到{posts_count}个帖子：")
             
