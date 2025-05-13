@@ -14,14 +14,10 @@ class FetchCourseByPlanRequest(BaseModel):
 
 class Course(BaseModel):
     name: str
-    class_id: int
-    teacher: str
-    credit: int
-    time: str
-    location: str
     course_id: str
+    class_id: float
+    teacher: Optional[str] = None
+    credit: float
+    time: Optional[str] = None
+    location: Optional[str] = None
     note: Optional[str] = None
-    course_type: Optional[str] = None
-    school: Optional[str] = None
-    major: Optional[str] = None
-    grade: Optional[str] = None

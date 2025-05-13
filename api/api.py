@@ -9,8 +9,6 @@ from api.models.config import ConfigData, CONFIG_PATH
 from typing import List, Dict, Any
 from src.agent.llm import AsyncLLM
 from src.agent.settings import LLM_Settings
-from app.db.session import SessionLocal
-from scripts.search_in_pdf import extract_courses_from_pdf
 import os
 
 ''' I think this may be the entrance of this project.'''
