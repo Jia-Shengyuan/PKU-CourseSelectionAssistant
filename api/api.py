@@ -9,6 +9,7 @@ from api.models.config import ConfigData, CONFIG_PATH
 from typing import List, Dict, Any
 from src.agent.llm import AsyncLLM
 from src.agent.settings import LLM_Settings
+from db.interface import activate_database_, get_course_info_, fetch_course_by_plan_
 import os
 
 ''' I think this may be the entrance of this project.'''
@@ -55,6 +56,10 @@ async def save_config(config: ConfigData):
         print(f"Error saving config: {e}")
         raise
 
+@app.post("/course/activate")
+async def activate_database(semester: str) -> None: # 需要的是形如 "2024-2025-2" 的字符串
+    return activate_database_(semester)
+
 
 @app.post("/course/info")
 async def get_course_info(course_request: CourseSearchRequest) -> List[Course]:
@@ -64,22 +69,19 @@ async def get_course_info(course_request: CourseSearchRequest) -> List[Course]:
     If class_id and teacher is both not provided, then get all courses by course_name.
     """
 
-    # Fake database
-    db = SessionLocal()
-
     print("Get course request : " + str(course_request))
 
-    # Fake search results
+    return get_course_info_(course_request)
     
 
 @app.post("/course/plan")
-async def fetch_course_by_plan(fetch_request: FetchCourseByPlanRequest) -> List[Course]:
+async def fetch_course_by_plan(fetch_request: FetchCourseByPlanRequest) -> List[Course]: 
     """
     Fetch course by plan, given semester, grade and plan_path.
     """
+    # 这里面的 semester 需要的是上/下 也可以让我这边改
 
-    # Return fake results
-    course_names = extract_courses_from_pdf(fetch_request.plan_path, fetch_request.grade, fetch_request.semester) 
+    return fetch_course_by_plan_(fetch_request)
 
 @app.post("/chat")
 async def chat(chat_request: str) -> StreamingResponse:

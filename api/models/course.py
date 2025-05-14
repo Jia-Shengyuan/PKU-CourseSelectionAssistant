@@ -3,7 +3,7 @@ from typing import Optional
 
 class CourseSearchRequest(BaseModel):
     name: str
-    class_id: Optional[int] = None
+    class_id: Optional[float] = None
     teacher: Optional[str] = None
 
 class FetchCourseByPlanRequest(BaseModel):

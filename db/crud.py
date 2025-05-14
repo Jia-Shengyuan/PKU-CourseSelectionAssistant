@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 from api.models.course import Course
 from db.dbmodel.dbcourse import DbCourse, CourseCreate
-from db.session.session import SessionLocal
 from db.utils import normalize_name
 import re
 
@@ -37,7 +36,3 @@ def get_courses_by_name(db: Session, name: str):
             matched_courses.append(course)
 
     return matched_courses
-
-if __name__ == "__main__":
-    db = SessionLocal()
-    print(get_courses_by_name(db, "数学分析2"))
