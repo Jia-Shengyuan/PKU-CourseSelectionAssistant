@@ -37,7 +37,9 @@ update 2025.5.9 by zcxxnqwq:
 `import course_evaluate.evaluator.evaluator as evaluator` 
 `evaluator.evaluate_course(ls)`
 
-其中ls为课程名称列表, 如 `ls = {"人工智能基础","微电子与电路基础"}`
+输出的课程评价在`crawler\data`目录下, 每次调用函数会清除该目录下的全部`json`文件
+
+其中`ls`为课程名称列表, 如 `ls = {"人工智能基础","微电子与电路基础"}`
 
 需要依赖`crawler/data`中的html文件, 已经隐藏内部细节
 ## 样例:
