@@ -5,14 +5,14 @@ from pydantic import BaseModel
 import asyncio
 import json
 from api.models.course import Course, CourseSearchRequest, FetchCourseByPlanRequest
-from api.models.chat import EvaluateRequest, GenPlanRequest
+from api.models.chat import EvaluateRequest, GenPlanRequest, TreeholeSearchRequest
 from api.models.config import ConfigData, CONFIG_PATH
 from typing import List, Dict, Any
 from src.agent.llm import AsyncLLM
 from src.agent.settings import LLM_Settings
 from db.interface import activate_database_, get_course_info_, fetch_course_by_plan_
 import os
-
+from crawler.search_courses import search_treehole
 ''' I think this may be the entrance of this project.'''
 
 app = FastAPI()
@@ -83,6 +83,25 @@ async def fetch_course_by_plan(fetch_request: FetchCourseByPlanRequest) -> List[
     # 这里面的 semester 需要的是上/下 也可以让我这边改
 
     return fetch_course_by_plan_(fetch_request)
+
+@app.post("/crawler/login")
+async def treehole_login() -> None:
+    """
+    Login to treehole, return nothing.
+    """
+    # 假设你已经实现了单例(singleton)模式，后续代码可以通过static的方法get_instance()获取driver
+    driver = TreeholeDriver()
+    driver.login()
+
+@app.post("/crawler/search")
+async def treehole_search(search_request: TreeholeSearchRequest) -> str:
+    """
+    Search treehole by course_name, and return the result.
+    """
+    course = search_request.course_name
+    # 使用单例模式的driver
+    driver = TreeholeDriver.get_instance() # 假设你已经实现了单例(singleton)模式
+    return await asyncio.to_thread(search_treehole, course, driver, f"<html><body><h1>{course}</h1>", search_request.max_len)    
 
 @app.post("/llm/evaluate")
 async def evaluate(evaluate_request: EvaluateRequest) -> StreamingResponse:

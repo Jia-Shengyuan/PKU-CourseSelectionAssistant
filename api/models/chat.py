@@ -2,8 +2,9 @@ from pydantic import BaseModel
 from typing import Optional, List
 from api.models.course import Course
 
-class ChatRequest(BaseModel):
-    query: str
+class TreeholeSearchRequest(BaseModel):
+    course_name: str
+    max_len: int = 5 # 搜多少条
 
 class EvaluateRequest(BaseModel):
     class_name: str
