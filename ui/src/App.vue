@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
-import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray } from '@/api/course'
+import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase } from '@/api/course'
 import { getConfig, saveConfig } from '@/api/config'
 
 // 配置信息
@@ -19,6 +19,11 @@ const formData = reactive({
   topP: 0.9,
   stream: true
 })
+
+// 存储原有学期
+const originalSemester = ref('')
+// 记录数据库是否已激活
+const isDatabaseActivated = ref(false)
 
 // 课程列表数据
 const courses = ref([])
@@ -104,6 +109,11 @@ const showEditCourseDialog = (courseIndex, classIndex) => {
 
 // 添加课程（如"数学分析"）
 const addCourse = async () => {
+  if (!isDatabaseActivated.value) {
+    ElMessage.warning('请先设置学期，并激活数据库')
+    return
+  }
+
   if (!newCourse.name) {
     ElMessage.warning('请输入课程名称')
     return
@@ -283,13 +293,21 @@ const handleConfirm = () => {
 }
 
 // 处理文件导入
-const handleFileImport = async (file) => {
+const handleFileImport = async () => {
+
+  if(!isDatabaseActivated.value) {
+    ElMessage.warning('请先设置学期，并激活数据库')
+    return
+  }
+
+  ElMessage.info('准备导入培养方案')
+
   try {
     // 获取课程列表
     const courseData = await fetchCourseByPlan(
       formData.semester,
       formData.grade,
-      file.name
+      'config/plan.pdf' // 使用固定的培养方案路径
     )
     
     if (!courseData || courseData.length === 0) {
@@ -298,7 +316,7 @@ const handleFileImport = async (file) => {
     }
 
     courses.value = courseDataToMapArray(courseData)
-    ElMessage.success(`成功导入培养方案：${file.name}`)
+    ElMessage.success('成功导入培养方案')
    
   } catch (error) {
     console.error('导入培养方案失败:', error)
@@ -344,6 +362,31 @@ const savePreference = async () => {
   }
 }
 
+// 处理设定学期
+const handleSetSemester = async () => {
+
+  if (!formData.semester) {
+    ElMessage.warning('请输入学期')
+    return
+  }
+  
+  if (formData.semester === originalSemester.value) {
+    ElMessage.info('学期已设置')
+    return
+  }
+
+  try {
+    await activateDatabase(formData.semester)
+    originalSemester.value = formData.semester
+    isDatabaseActivated.value = true
+    courses.value = []
+    ElMessage.success('学期设置成功，数据库已激活')
+  } catch (error) {
+    console.error('设置学期失败:', error)
+    ElMessage.error('设置学期失败。请确保已将培养方案放置在config目录下，并命名为plan.pdf')
+  }
+}
+
 // 加载配置
 const loadConfig = async () => {
   try {
@@ -363,15 +406,24 @@ const loadConfig = async () => {
     formData.semester = config.user.semester
     formData.userDescription = config.user.introduction
 
-    courses.value = await fetchCourseRawInfo(config.course.course_list)
+    // 保存原始学期
+    originalSemester.value = formData.semester
+
+    // 激活数据库
+    if (formData.semester) {
+      await activateDatabase(formData.semester)
+      isDatabaseActivated.value = true
+      courses.value = await fetchCourseRawInfo(config.course.course_list)
+    } else {
+      courses.value = [];
+      isDatabaseActivated.value = false
+    }
     
     // 更新学分和偏好
     minCredits.value = config.course.min_credit
     maxCredits.value = config.course.max_credit
     coursePreference.value = config.course.preference
     
-    // 获取课程详细信息
-    // await fetchCourseInfo()
   } catch (error) {
     console.error('加载配置失败:', error)
     ElMessage.error('加载配置失败')
@@ -417,6 +469,11 @@ onMounted(() => {
               <el-input v-model="formData.semester" placeholder="请输入当前学期（如2024-2025-2）" />
             </el-form-item>
           </el-col>
+          <el-col :span="8">
+            <el-form-item>
+              <el-button type="primary" @click="handleSetSemester">设定学期</el-button>
+            </el-form-item>
+          </el-col>
         </el-row>
         <el-row>
           <el-col :span="24">
@@ -455,7 +512,7 @@ onMounted(() => {
               <el-slider
                 v-model="formData.temperature"
                 :min="0"
-                :max="1"
+                :max="1.5"
                 :step="0.01"
                 :format-tooltip="value => value.toFixed(2)"
               />
@@ -481,15 +538,7 @@ onMounted(() => {
         <div class="card-header">
           <span>课程列表</span>
           <div class="button-group">
-            <el-upload
-              class="upload-demo"
-              action="#"
-              :auto-upload="false"
-              :show-file-list="false"
-              @change="handleFileImport"
-            >
-              <el-button type="success">导入培养方案</el-button>
-            </el-upload>
+            <el-button type="success" @click="handleFileImport">导入培养方案</el-button>
             <el-button type="primary" @click="showAddCourseDialog">手动添加课程</el-button>
           </div>
         </div>

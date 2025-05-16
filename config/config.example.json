@@ -13,9 +13,9 @@
         "student_id": "",
         "portal_password": "",
         "semester": "2024-2025-2",
-        "grade": "大一下",
+        "grade": "大一",
         "introduction": "",
-        "chrome_user_data_dir":""
+        "chrome_user_data_dir":"config/chrome_data"
     },
 
     "course": {
