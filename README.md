@@ -6,7 +6,7 @@
 
 启动后端：
 ```bash
-uvicorn api.api:app --reload
+uvicorn api.main:app --reload
 ```
 
 启动前端（需要新开一个终端，后端的不关）：
@@ -15,15 +15,19 @@ cd ui
 pnpm run dev
 ```
 
-# LLM 调用
+之后按照输出打开前端对应网页即可。
+
+------
+
+## LLM 调用
 
 - 先在 `config/config.json` 配置模型
 - 之后可以在 `src` 文件夹中的 `chat_example.py` 可以用来测试
-- 调用 `LLM_API` 的 `chat` 方法即可对话（ `achat` 未测试）
+- 调用 `LLM` 或 `AsyncLLM` 的 `chat` 方法即可对话，调用方法见 `chat_example.py`
 
 -------
 
-# 树洞信息获取
+## 树洞信息获取
 
 update 2025.5.9 by zcxxnqwq:
 
