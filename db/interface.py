@@ -39,6 +39,12 @@ def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
     semester = fetch_request.semester
     grade = fetch_request.grade
     plan_path = fetch_request.plan_path
+    if semester[-1] == '1':
+        semester = "上"
+    elif semester[-1] =='2':
+        semester = "下"
+    else:
+        return []
     course_name = extract_courses_from_pdf(plan_path, grade, semester)
     results = []
     for course in course_name:
@@ -47,4 +53,4 @@ def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
 
 if __name__ == "__main__":
     activate_database_("2024-2025-2")
-    print(fetch_course_by_plan_(FetchCourseByPlanRequest(semester="下", grade="大一", plan_path="./config/plan.pdf")))
+    print(fetch_course_by_plan_(FetchCourseByPlanRequest(semester="2024-2025-2", grade="大一", plan_path="./config/plan.pdf")))
