@@ -3,6 +3,7 @@ from ..logger.logger import Logger
 import json
 import sys
 import os
+import glob
 def load_json_and_extract_fields(json_file_path):
     """
     加载JSON文件并提取course_name和comments字段
@@ -87,13 +88,12 @@ class Evaluator:
                 self.full_response += token
 
             logger.log("")
-
             messages.append({"role": "assistant", "content": self.full_response})
             
         except Exception as e:
             logger.log_error(f"发生错误: {str(e)}")
 
-def evaluate_json_file(json_file = "course_evaluate\comments.json"):
+def evaluate_json_file(json_file, final_file):
     # 指定JSON文件路径（根据实际情况修改）
     
     # 从JSON提取数据
@@ -110,12 +110,43 @@ def evaluate_json_file(json_file = "course_evaluate\comments.json"):
         course_name=course_name,   
         comments=comments
     )
-    print(test_evaluator.full_response)
+    #print(test_evaluator.full_response)
     add_course_review_to_json(
     test_evaluator.full_response,
     course_name,
-    json_file="course_reviews.json",)
+    json_file= final_file,)
+
+def html_to_json(html_file_name, json_file_name):
+    import re
+    with open(html_file_name, "r", encoding="utf-8") as file:
+        html_first_line = file.readline()  # 读取第一行（如果有多行，可能需要调整）
+        html_full = file.read() 
+    pattern = r"<h1>(.*?)</h1>"              # 匹配 <h1>...</h1> 中间内容
+    match = re.search(pattern, html_first_line)
+
+    data = {
+        "course_name": match.group(1),
+        "comment": html_full
+    }
+    with open(json_file_name, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False)
+
+def evaluate(course_name, final_file):
+    from_file = r"crawler\data\\" + course_name + ".html"
+    to_file = r"course_evaluate\raw_comments\\" + course_name + ".json" 
+    html_to_json(from_file, to_file)
+    evaluate_json_file(to_file, final_file)
 
 
+def clear_data_folder():
+    json_files = glob.glob(r"course_evaluate\data\*.json")
+    for file in json_files:
+        os.remove(file)
+        print(f"已删除: {file}")
 
-
+def evaluate_course(ls):
+    clear_data_folder()
+    final_file = r"course_evaluate\data\evaluation.json"
+    for course_name in ls:
+        #final_file = r"course_evaluate\data\\" + course_name + ".json" 分开的输出
+        evaluate(course_name, final_file)
