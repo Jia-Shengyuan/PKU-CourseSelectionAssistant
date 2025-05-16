@@ -36,7 +36,9 @@ update 2025.5.9 by zcxxnqwq:
 ## 使用方法:
 `import course_evaluate.evaluator.evaluator as evaluator` 
 `evaluator.evaluate_course(ls)`
+
 其中ls为课程名称列表, 如 `ls = {"人工智能基础","微电子与电路基础"}`
+
 需要依赖`crawler/data`中的html文件, 已经隐藏内部细节
 ## 样例:
 运行根目录下的`test_evaluator.py`
