@@ -18,13 +18,33 @@ def create_course(db: Session, course: CourseCreate):
 def get_courses_by_name(db: Session, name: str):
     # 罗马数字 → 阿拉伯数字 对照表
 
-    target = normalize_name(name)
+    target1 = normalize_name(name)
+    target2 = normalize_name(name+"实验班")
 
     all_courses = db.query(DbCourse).all()
     matched_courses = []
 
     for dbcourse in all_courses:
-        if normalize_name(dbcourse.name) == target:
+        n_name = normalize_name(dbcourse.name)
+        if n_name == target1 or n_name == target2:
+            course=Course(name=dbcourse.name,
+                          course_id=dbcourse.course_id,
+                          class_id=dbcourse.class_id,
+                          teacher=dbcourse.teacher,
+                          credit=dbcourse.credit,
+                          time=dbcourse.time,
+                          location=dbcourse.location,
+                          note=dbcourse.note)
+            matched_courses.append(course)
+
+    return matched_courses
+
+def get_courses_by_id_(db: Session, id: str):
+    all_courses = db.query(DbCourse).all()
+    matched_courses = []
+
+    for dbcourse in all_courses:
+        if dbcourse.course_id.lstrip('0') == id.lstrip('0'):
             course=Course(name=dbcourse.name,
                           course_id=dbcourse.course_id,
                           class_id=dbcourse.class_id,

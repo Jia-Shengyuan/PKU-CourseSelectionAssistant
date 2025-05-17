@@ -2,7 +2,7 @@ import json
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from api.models.course import Course, CourseSearchRequest, FetchCourseByPlanRequest
-from db.crud import get_courses_by_name
+from db.crud import get_courses_by_name, get_courses_by_id_
 from db.utils import extract_courses_from_pdf
 
 SessionLocal = None
@@ -34,8 +34,12 @@ def get_course_info_(course_request: CourseSearchRequest):
         results.append(course)
     return results
 
-def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
+def get_courses_by_id(id: str):
     db = SessionLocal()
+    courses = get_courses_by_id_(db, id)
+    return courses
+
+def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
     semester = fetch_request.semester
     grade = fetch_request.grade
     plan_path = fetch_request.plan_path
@@ -45,12 +49,15 @@ def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
         semester = "下"
     else:
         return []
-    course_name = extract_courses_from_pdf(plan_path, grade, semester)
+    course_list = extract_courses_from_pdf(plan_path, grade, semester)
     results = []
-    for course in course_name:
-        results = results + get_course_info_(CourseSearchRequest(name=course))
+    for (id, name) in course_list:
+        results = results + get_courses_by_id(id)
+        results = results + get_course_info_(CourseSearchRequest(name=name+"实验班"))
     return results
 
 if __name__ == "__main__":
     activate_database_("2024-2025-2")
+    #print(get_course_info_(CourseSearchRequest(name="数学分析2")))
+    #print(get_courses_by_id(id="132302"))
     print(fetch_course_by_plan_(FetchCourseByPlanRequest(semester="2024-2025-2", grade="大一", plan_path="./config/plan.pdf")))
