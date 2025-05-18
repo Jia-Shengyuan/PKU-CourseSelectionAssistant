@@ -7,6 +7,7 @@ import json
 from api.models.course import Course, CourseSearchRequest, FetchCourseByPlanRequest
 from api.models.chat import EvaluateRequest, GenPlanRequest, TreeholeSearchRequest
 from api.models.config import ConfigData, CONFIG_PATH
+from api.models.crawler import TreeholeDriver
 from typing import List, Dict, Any
 from src.agent.llm import AsyncLLM
 from src.agent.settings import LLM_Settings
@@ -93,7 +94,7 @@ async def treehole_login() -> None:
     driver = TreeholeDriver()
     driver.login()
 
-@app.post("/crawler/search")
+@app.post("/crawler/search_courses")
 async def treehole_search(search_request: TreeholeSearchRequest) -> str:
     """
     Search treehole by course_name, and return the result.
