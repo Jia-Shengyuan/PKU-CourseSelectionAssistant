@@ -5,6 +5,7 @@ class CourseSearchRequest(BaseModel):
     name: str
     class_id: Optional[float] = None
     teacher: Optional[str] = None
+    accept_advanced_class: Optional[bool] = False
 
 class FetchCourseByPlanRequest(BaseModel):
     semester: str
