@@ -1,0 +1,3 @@
+crawler/data/*.html linguist-generated
+data/*.json linguist-generated
+course_evaluate/data/*.json linguist-generated

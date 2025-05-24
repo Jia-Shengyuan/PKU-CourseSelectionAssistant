@@ -39,10 +39,11 @@ def extract_courses_from_pdf(pdf_path, target_grade, target_semester):
                 if version1 in line or version2 in line or version3 in line:
                     parts = line.strip().split()
                     course_name = ""
+                    course_id = parts[0]
                     for part in parts[1:]:
                         if part in stop_keywords:
                             break
                         course_name = course_name + part
-                    courses.append(course_name)
+                    courses.append((course_id,course_name))
 
     return courses

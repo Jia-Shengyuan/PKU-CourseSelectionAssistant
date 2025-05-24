@@ -92,3 +92,17 @@ export const courseDataToMapArray = (courseData) => {
     return Array.from(courseMap.values())
 
 }
+
+/**
+ * 激活数据库
+ * @param {string} semester - 学期，格式如 "2024-2025-2"
+ * @returns {Promise<void>}
+ */
+export const activateDatabase = async (semester) => {
+    try {
+        await axios.post(`${BASE_URL}/course/activate?semester=${semester}`)
+    } catch (error) {
+        console.error('激活数据库失败:', error)
+        throw error
+    }
+}

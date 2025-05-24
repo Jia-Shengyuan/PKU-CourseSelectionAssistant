@@ -5,13 +5,15 @@ from pydantic import BaseModel
 import asyncio
 import json
 from api.models.course import Course, CourseSearchRequest, FetchCourseByPlanRequest
+from api.models.chat import EvaluateRequest, GenPlanRequest, TreeholeSearchRequest
 from api.models.config import ConfigData, CONFIG_PATH
+from api.models.crawler import TreeholeDriver
 from typing import List, Dict, Any
 from src.agent.llm import AsyncLLM
 from src.agent.settings import LLM_Settings
 from db.interface import activate_database_, get_course_info_, fetch_course_by_plan_
 import os
-
+from crawler.search_courses import search_treehole
 ''' I think this may be the entrance of this project.'''
 
 app = FastAPI()
@@ -58,7 +60,7 @@ async def save_config(config: ConfigData):
 
 @app.post("/course/activate")
 async def activate_database(semester: str) -> None: # 需要的是形如 "2024-2025-2" 的字符串
-    return activate_database_(semester)
+    activate_database_(semester)
 
 
 @app.post("/course/info")
@@ -83,9 +85,50 @@ async def fetch_course_by_plan(fetch_request: FetchCourseByPlanRequest) -> List[
 
     return fetch_course_by_plan_(fetch_request)
 
-@app.post("/chat")
-async def chat(chat_request: str) -> StreamingResponse:
+@app.post("/crawler/login")
+async def treehole_login() -> None:
     """
-    Chat with LLM.
+    Login to treehole, return nothing.
+    """
+    # 假设你已经实现了单例(singleton)模式，后续代码可以通过static的方法get_instance()获取driver
+    driver = TreeholeDriver()
+    driver.login()
+
+@app.post("/crawler/search_courses")
+async def treehole_search(search_request: TreeholeSearchRequest) -> str:
+    """
+    Search treehole by course_name, and return the result.
+    """
+    course = search_request.course_name
+    # 使用单例模式的driver
+    driver = TreeholeDriver.get_instance() # 假设你已经实现了单例(singleton)模式
+    return await asyncio.to_thread(search_treehole, course, driver, f"<html><body><h1>{course}</h1>", search_request.max_len)    
+
+@app.post("/llm/evaluate")
+async def evaluate(evaluate_request: EvaluateRequest) -> StreamingResponse:
+    """
+    Evaluate the course by class_name and raw_text.
     """
     pass
+
+@app.post("/llm/plan")
+async def gen_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:
+    """
+    生成选课方案，使用流式响应逐个返回每个方案。
+    每个方案是一个List[Course]，表示一组选课组合。
+    总共会生成num_plans个方案。
+    """
+    async def generate_plans():
+        for i in range(gen_plan_request.num_plans):
+            # 这里调用大模型生成一个选课方案
+            # 实际上，这些课程可能都是由同一次大模型调用生成的，所以你可以考虑和大模型约定输出格式，一次生成结束之后怎么标记一下
+            plan = await generate_single_plan(gen_plan_request)  # 这个函数需要你实现
+            # 将方案转换为JSON字符串并返回
+            yield json.dumps(plan, ensure_ascii=False) + "\n"
+            # 可选：在方案之间添加短暂延迟
+            await asyncio.sleep(0.1)
+
+    return StreamingResponse(
+        generate_plans(),
+        media_type="application/x-ndjson"  # 使用newline-delimited JSON格式
+    )

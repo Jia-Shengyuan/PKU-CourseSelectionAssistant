@@ -43,6 +43,15 @@ def login():
         print("✅ 已复用浏览器登录状态，无需验证码。")
         return driver
     else:
-        print("❌ 登录失效，请手动用浏览器登录一次，然后重试。")
-        time.sleep(60)
+        print("❌ 未检测到有效登录状态，请在打开的浏览器中手动登录...")
+
+        # 等待用户手动登录，最多等待 90 秒
+        for i in range(90):
+            if is_logged_in(driver):
+                print("✅ 手动登录成功！")
+                return driver
+            time.sleep(1)
+
+        print("❌ 登录超时，请重试。")
+        driver.quit()
         return None
