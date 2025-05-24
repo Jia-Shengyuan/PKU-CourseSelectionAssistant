@@ -64,7 +64,12 @@ def add_course_review_to_json(
     # 4. 更新数据（如果 `course_name` 不存在，则创建）
     if course_name not in existing_data:
         existing_data[course_name] = []
-    
+    courses  = selector.load_json('data\processed_courses.json')
+    search_results = selector.search_course(courses, course_name)
+    print(f"{course_name} 找到 {len(search_results)} 个匹配结果：")
+    data['credit'] = search_results[0]['credit']
+    data['time'] = search_results[0]['time']
+    data['location'] = search_results[0]['location']
     existing_data[course_name].append(data)  # 加入新评价
     # 5. 写回 JSON 文件
     with open(json_file, "w", encoding="utf-8") as f:
@@ -78,7 +83,7 @@ class Evaluator:
         llm = LLM_API(settings, logger)
     
 
-        messages = [{f"role": "system", "content": f"根据上述评价,从{"或者".join(all_teacher)}中选择一个最好的老师, 从给分,教学质量角度,从0到10给老师的课程打分,\
+        messages = [{f"role": "system", "content": f"根据上述评价,从{"或者".join(all_teacher)}中选择一个最好的老师, 从给分,教学质量角度,从0到100给老师的课程打分,不用很接近100,\
                      请以如下形式回答问题'Teacher: Point: Reason1: Reason2:' 其中Teacher只保留老师的中文名 "}]            
         try:
 
@@ -105,7 +110,7 @@ def evaluate_json_file(json_file, final_file):
     course_name, comments = load_json_and_extract_fields(json_file)
     courses  = selector.load_json('data\processed_courses.json')
     search_results = selector.search_course(courses, course_name)
-    print(f"找到 {len(search_results)} 个匹配结果：")
+    print(f"{course_name} 找到 {len(search_results)} 个匹配结果：")
     all_teacher = []
     for course in search_results:
         all_teacher += course['teacher']

@@ -3,7 +3,7 @@
     "model": {
         "base_url": "https://api.siliconflow.cn/v1/",
         "model_name": "Pro/deepseek-ai/DeepSeek-V3",
-        "api_key": "",
+        "api_key": "sk-xzkbfruqpoussykqcwajzmvsikbrrcaxdnlylcusgddxgisu",
         "temperature": 0.7,
         "top_p": 0.95,
         "stream": true
@@ -28,5 +28,4 @@
         "max_credit": 24,
         "preference" : ""
     }
-
 }
