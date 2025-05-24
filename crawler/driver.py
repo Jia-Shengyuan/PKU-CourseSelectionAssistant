@@ -15,6 +15,18 @@ class TreeholeDriver:
         if self.driver is None:
             # self.driver = login()
             self.driver = new_login()
+            
+    def close(self):
+        if self.driver:
+            try:
+                self.driver.quit()
+            except Exception as e:
+                print(f"❌ 关闭浏览器时出错: {e}")
+            finally:
+                self.driver = None
+                TreeholeDriver._instance = None
+        else:
+            print("⚠️ 无需关闭，浏览器未初始化")
 
     @staticmethod
     def get_instance():

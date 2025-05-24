@@ -101,7 +101,7 @@ async def treehole_close() -> None:
     Close the treehole driver.
     """
     driver = TreeholeDriver()
-    # driver.close()
+    driver.close()
 
 @app.post("/crawler/search_courses")
 async def treehole_search(search_request: TreeholeSearchRequest) -> str:
