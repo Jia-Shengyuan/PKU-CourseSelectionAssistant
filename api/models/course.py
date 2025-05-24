@@ -5,11 +5,13 @@ class CourseSearchRequest(BaseModel):
     name: str
     class_id: Optional[float] = None
     teacher: Optional[str] = None
+    experimental_class: Optional[bool] = False
 
 class FetchCourseByPlanRequest(BaseModel):
     semester: str
     grade: str
     plan_path: str
+    experimental_class: Optional[bool] = False
 
 
 class Course(BaseModel):

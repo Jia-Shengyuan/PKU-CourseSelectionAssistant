@@ -23,8 +23,11 @@ def get_course_info_(course_request: CourseSearchRequest):
     name = course_request.name
     class_id = course_request.class_id
     teacher = course_request.teacher
+    experimental_class = course_request.experimental_class
 
     courses = get_courses_by_name(db, name)
+    if experimental_class:
+        courses = courses + get_courses_by_name(db, name+"实验班")
     results = []
     for course in courses:
         if class_id != None and course.class_id != class_id:
@@ -43,6 +46,7 @@ def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
     semester = fetch_request.semester
     grade = fetch_request.grade
     plan_path = fetch_request.plan_path
+    experimental_class = fetch_request.experimental_class
     if semester[-1] == '1':
         semester = "上"
     elif semester[-1] =='2':
@@ -53,11 +57,12 @@ def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
     results = []
     for (id, name) in course_list:
         results = results + get_courses_by_id(id)
-        results = results + get_course_info_(CourseSearchRequest(name=name+"实验班"))
+        if experimental_class:
+            results = results + get_course_info_(CourseSearchRequest(name=name+"实验班", experimental_class=True))
     return results
 
 if __name__ == "__main__":
     activate_database_("2024-2025-2")
-    #print(get_course_info_(CourseSearchRequest(name="数学分析2")))
+    #print(get_course_info_(CourseSearchRequest(name="数学分析2",experimental_class=True)))
     #print(get_courses_by_id(id="132302"))
-    print(fetch_course_by_plan_(FetchCourseByPlanRequest(semester="2024-2025-2", grade="大一", plan_path="./config/plan.pdf")))
+    print(fetch_course_by_plan_(FetchCourseByPlanRequest(semester="2024-2025-2", grade="大一", plan_path="./config/plan.pdf", experimental_class=True)))
