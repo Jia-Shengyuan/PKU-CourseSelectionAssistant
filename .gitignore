@@ -14,6 +14,10 @@
 api_key.txt
 config.json
 
+
+crawler/data/
+config/chrome_data/
+
 # 忽略 config/api_key.txt 文件（必须手动更新；手动更新时不保留api key）
 # config/api_key.txt
 

@@ -1,6 +1,4 @@
-'''
-
-from crawler.login import login
+from crawler.login import new_login
 from selenium.webdriver.chrome.webdriver import WebDriver
 from typing import Optional
 
@@ -15,12 +13,11 @@ class TreeholeDriver:
 
     def login(self):
         if self.driver is None:
-            self.driver = login()
+            # self.driver = login()
+            self.driver = new_login()
 
     @staticmethod
     def get_instance():
         if TreeholeDriver._instance is None or TreeholeDriver._instance.driver is None:
             raise ValueError("Driver 未初始化，请先调用 login")
         return TreeholeDriver._instance.driver
-
-'''
