@@ -4,7 +4,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from api.models.treehole_driver import TreeholeDriver  # 加上这行，使用 TreeholeDriver 单例
+from api.models.crawler import TreeholeDriver  # 加上这行，使用 TreeholeDriver 单例
 
 def click_back_button(driver):
     try:

@@ -7,12 +7,12 @@ class TreeholeSearchRequest(BaseModel):
     max_len: int = 5 # 搜多少条
 
 class EvaluateRequest(BaseModel):
-    class_name: str
+    course_name: str
     raw_text: str
 
 # 这些 class 都是暂定的，可以按照你的需求进行修改，在群里说一声即可
 class EvaluatedCourse(BaseModel):
-    class_name: str
+    course_name: str
     summary: str # LLM对课程的总结
     choices: List[Course] # 待选课程列表
 

@@ -99,6 +99,10 @@ async def treehole_search(search_request: TreeholeSearchRequest) -> str:
     """
     Search treehole by course_name, and return the result.
     """
+
+    await asyncio.sleep(5)
+    return "Test response for class " + search_request.course_name + " with max_len " + str(search_request.max_len)
+
     course = search_request.course_name
     # 使用单例模式的driver
     driver = TreeholeDriver.get_instance() # 假设你已经实现了单例(singleton)模式
@@ -110,6 +114,11 @@ async def evaluate(evaluate_request: EvaluateRequest) -> StreamingResponse:
     Evaluate the course by class_name and raw_text.
     """
     pass
+
+@app.post("/llm/evaluate_test")
+async def evaluate_test(evaluate_request: EvaluateRequest) -> str:
+    await asyncio.sleep(10)
+    return evaluate_request.course_name + ": " + evaluate_request.raw_text
 
 @app.post("/llm/plan")
 async def gen_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:

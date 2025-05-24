@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
-import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase } from '@/api/course'
+import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, searchCourseEvaluation, getCourseEvaluation } from '@/api/course'
 import { getConfig, saveConfig } from '@/api/config'
 
 // 配置信息
@@ -278,8 +278,21 @@ const deleteClass = (courseIndex, classIndex) => {
   ElMessage.success('删除成功')
 }
 
-// 确认按钮点击事件
-const handleConfirm = () => {
+// 课程评价状态
+const courseEvaluationStatus = ref({})  // 存储每个课程的评价状态
+const courseEvaluationContent = ref({})  // 存储每个课程的评价内容
+const activeEvaluationTab = ref('')  // 当前激活的评价标签页
+
+// 课程评价状态枚举
+const EvaluationStatus = {
+  QUEUED: '队列中',
+  SEARCHING: '搜索中',
+  EVALUATING: '评价中',
+  COMPLETED: '已完成'
+}
+
+// 处理课程评价
+const handleCourseEvaluation = async () => {
   if (!formData.studentId || !formData.password) {
     ElMessage.warning('请填写学号和密码')
     return
@@ -288,8 +301,78 @@ const handleConfirm = () => {
     ElMessage.warning('请至少添加一门课程')
     return
   }
-  // TODO: 实现搜索推荐逻辑
-  console.log('开始搜索推荐', formData, courses.value)
+
+  // 初始化评价状态
+  courses.value.forEach(course => {
+    courseEvaluationStatus.value[course.name] = EvaluationStatus.QUEUED
+    courseEvaluationContent.value[course.name] = ''
+  })
+
+  // 设置第一个标签页为激活状态
+  if (courses.value.length > 0) {
+    activeEvaluationTab.value = courses.value[0].name
+  }
+
+  // 创建一个队列来存储待处理的课程
+  const courseQueue = [...courses.value]
+  let isSearching = false
+
+  // 处理树洞搜索的函数
+  const processSearch = async (course) => {
+    try {
+      // 更新状态为搜索中
+      courseEvaluationStatus.value[course.name] = EvaluationStatus.SEARCHING
+      
+      // 搜索树洞评价
+      const rawText = await searchCourseEvaluation(course.name)
+      
+      // 更新状态为评价中
+      courseEvaluationStatus.value[course.name] = EvaluationStatus.EVALUATING
+      
+      // 开始大模型评价（不等待完成）
+      processEvaluation(course, rawText)
+      
+      // 继续处理队列中的下一个课程
+      isSearching = false
+      processQueue()
+    } catch (error) {
+      console.error(`搜索课程 ${course.name} 评价失败:`, error)
+      ElMessage.error(`搜索课程 ${course.name} 评价失败`)
+      isSearching = false
+      processQueue()
+    }
+  }
+
+  // 处理大模型评价的函数
+  const processEvaluation = async (course, rawText) => {
+    try {
+      // 获取大模型评价
+      const evaluation = await getCourseEvaluation(course.name, rawText)
+      
+      // 更新评价内容
+      courseEvaluationContent.value[course.name] = evaluation
+      
+      // 更新状态为已完成
+      courseEvaluationStatus.value[course.name] = EvaluationStatus.COMPLETED
+    } catch (error) {
+      console.error(`评价课程 ${course.name} 失败:`, error)
+      ElMessage.error(`评价课程 ${course.name} 失败`)
+    }
+  }
+
+  // 处理队列中的课程
+  const processQueue = async () => {
+    if (isSearching || courseQueue.length === 0) {
+      return
+    }
+
+    isSearching = true
+    const course = courseQueue.shift()
+    processSearch(course)
+  }
+
+  // 开始处理队列
+  processQueue()
 }
 
 // 处理文件导入
@@ -614,8 +697,34 @@ onMounted(() => {
 
     <div class="button-container">
       <el-button type="success" size="large" @click="savePreference">保存</el-button>
-      <el-button type="primary" size="large" @click="handleConfirm">开始搜索推荐</el-button>
+      <el-button type="primary" size="large" @click="handleCourseEvaluation">开始搜索推荐</el-button>
     </div>
+
+    <!-- 课程评价展示区域 -->
+    <el-card v-if="Object.keys(courseEvaluationStatus).length > 0" class="evaluation-card">
+      <template #header>
+        <div class="card-header">
+          <span>课程评价</span>
+        </div>
+      </template>
+      <el-tabs v-model="activeEvaluationTab" type="card">
+        <el-tab-pane 
+          v-for="course in courses" 
+          :key="course.name" 
+          :label="course.name" 
+          :name="course.name"
+        >
+          <div class="evaluation-content">
+            <div class="status-badge" :class="courseEvaluationStatus[course.name].toLowerCase()">
+              {{ courseEvaluationStatus[course.name] }}
+            </div>
+            <div class="evaluation-text" v-if="courseEvaluationContent[course.name]">
+              {{ courseEvaluationContent[course.name] }}
+            </div>
+          </div>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
 
     <!-- 添加课程对话框 -->
     <el-dialog v-model="addCourseDialogVisible" title="添加课程" width="500px">
@@ -887,5 +996,61 @@ body {
 
 :deep(.el-slider__runway) {
   margin: 16px 0;
+}
+
+.evaluation-card {
+  margin-top: 20px;
+}
+
+.evaluation-content {
+  padding: 20px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.status-badge.队列中 {
+  background-color: #909399;
+  color: white;
+}
+
+.status-badge.搜索中 {
+  background-color: #409eff;
+  color: white;
+}
+
+.status-badge.评价中 {
+  background-color: #e6a23c;
+  color: white;
+}
+
+.status-badge.已完成 {
+  background-color: #67c23a;
+  color: white;
+}
+
+.evaluation-text {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: #303133;
+}
+
+:deep(.el-tabs__item) {
+  font-size: 14px;
+  padding: 0 20px;
+}
+
+:deep(.el-tabs__nav) {
+  border: none;
+}
+
+:deep(.el-tabs__item.is-active) {
+  color: #409eff;
+  border-bottom: 2px solid #409eff;
 }
 </style>

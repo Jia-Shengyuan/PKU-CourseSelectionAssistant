@@ -106,3 +106,31 @@ export const activateDatabase = async (semester) => {
         throw error
     }
 }
+
+// 搜索课程评价
+export const searchCourseEvaluation = async (courseName) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/crawler/search_courses`, {
+      course_name: courseName,
+      max_len: 10  // 可以根据需要调整
+    });
+    return response.data;
+  } catch (error) {
+    console.error('搜索课程评价失败:', error);
+    throw error;
+  }
+};
+
+// 获取课程评价
+export const getCourseEvaluation = async (courseName, rawText) => {
+  try {
+    const response = await axios.post(`${BASE_URL}/llm/evaluate_test`, {
+      course_name: courseName,
+      raw_text: rawText
+    });
+    return response.data;
+  } catch (error) {
+    console.error('获取课程评价失败:', error);
+    throw error;
+  }
+};
