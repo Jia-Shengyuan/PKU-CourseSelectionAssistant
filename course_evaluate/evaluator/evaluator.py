@@ -1,5 +1,6 @@
 from ..agent.llm import LLM_API, LLM_Settings
 from ..logger.logger import Logger
+import course_selector.selector.selector as selector
 import json
 import sys
 import os
@@ -43,14 +44,16 @@ def add_course_review_to_json(
     data = {}
     for line in lines:
         line = line.strip()
-        if line.startswith("Point:"):
-            data["Point"] = int(line.split(":")[1].strip())
+        if line.startswith("Teacher:"):
+            data["Teacher"] = line.split(":")[1].strip()
+        elif line.startswith("Point:"):
+            data["Point"] = int(line.split("Point:")[1].strip())
         elif line.startswith("Reason1:"):
             data["Reason1"] = line.split("Reason1:")[1].strip()
         elif line.startswith("Reason2:"):
             data["Reason2"] = line.split("Reason2:")[1].strip()
     # 2. 检查是否所有必要的字段都存在
-    required_fields = ["Point", "Reason1", "Reason2"]
+    required_fields = ["Teacher", "Point", "Reason1", "Reason2"]
     if not all(field in data for field in required_fields):
         raise ValueError("输入字符串缺少 Point / Reason1 / Reason2 其中一项")
     # 3. 读取现有的 JSON 数据（如果文件存在）
@@ -69,12 +72,14 @@ def add_course_review_to_json(
     print(f"✅ 评价已添加到 {course_name} 下，存储至 {json_file}")
 
 class Evaluator:
-    def __init__(self, course_name, comments):
+    def __init__(self, course_name, comments, all_teacher):
         logger = Logger()
         settings = LLM_Settings()
         llm = LLM_API(settings, logger)
+    
 
-        messages = [{"role": "system", "content": "请评论给课程打分,评价为上过课的学长所写,根据上述评价,从给分,教学质量角度,从0到10给课程打分,请以如下形式回答问题'Point: Reason1: Reason2' "}]            
+        messages = [{f"role": "system", "content": f"根据上述评价,从{"或者".join(all_teacher)}中选择一个最好的老师, 从给分,教学质量角度,从0到10给老师的课程打分,\
+                     请以如下形式回答问题'Teacher: Point: Reason1: Reason2:' 其中Teacher只保留老师的中文名 "}]            
         try:
 
             messages.append({"role": "user", "content": "课程名称:" + course_name + " 评价:" + comments})
@@ -98,7 +103,17 @@ def evaluate_json_file(json_file, final_file):
     
     # 从JSON提取数据
     course_name, comments = load_json_and_extract_fields(json_file)
-    
+    courses  = selector.load_json('data\processed_courses.json')
+    search_results = selector.search_course(courses, course_name)
+    print(f"找到 {len(search_results)} 个匹配结果：")
+    all_teacher = []
+    for course in search_results:
+        all_teacher += course['teacher']
+        print("--------------------")
+        print(f"课程名称: {course['course_name']}")
+        print(f"课程ID: {course['course_id']}")
+        print(f"授课教师: {course['teacher']}")
+        print(f"学分: {course['credit']}")
     if course_name is None:
         return  # 提前终止
     
@@ -106,13 +121,14 @@ def evaluate_json_file(json_file, final_file):
     #print(f"评论内容: {comments[:50]}")  # 只打印前50字符
 
     # 创建Evaluator实例并传入数据
-    test_evaluator = Evaluator(
-        course_name=course_name,   
-        comments=comments
+    E = Evaluator(
+        course_name=course_name,  
+        comments=comments,
+        all_teacher = all_teacher,
     )
     #print(test_evaluator.full_response)
     add_course_review_to_json(
-    test_evaluator.full_response,
+    E.full_response,
     course_name,
     json_file= final_file,)
 
@@ -126,12 +142,12 @@ def html_to_json(html_file_name, json_file_name):
 
     data = {
         "course_name": match.group(1),
-        "comment": html_full
+        "comment": html_full,
     }
     with open(json_file_name, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False)
 
-def evaluate(course_name, final_file):
+def evaluate(course_name,  final_file):
     from_file = r"crawler\data\\" + course_name + ".html"
     to_file = r"course_evaluate\raw_comments\\" + course_name + ".json" 
     html_to_json(from_file, to_file)
@@ -148,5 +164,6 @@ def evaluate_course(ls):
     clear_data_folder()
     final_file = r"course_evaluate\data\evaluation.json"
     for course_name in ls:
-        #final_file = r"course_evaluate\data\\" + course_name + ".json" 分开的输出
         evaluate(course_name, final_file)
+        #final_file = r"course_evaluate\data\\" + course_name + ".json" 分开的输出
+        
