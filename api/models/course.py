@@ -3,23 +3,23 @@ from typing import Optional
 
 class CourseSearchRequest(BaseModel):
     name: str
-    class_id: Optional[float] = None
     teacher: Optional[str] = None
-    experimental_class: Optional[bool] = False
+    class_id: Optional[float] = None
+    accept_advanced_class: Optional[bool] = False
 
 class FetchCourseByPlanRequest(BaseModel):
-    semester: str
     grade: str
+    semester: str
     plan_path: str
-    experimental_class: Optional[bool] = False
+    accept_advanced_class: Optional[bool] = False
 
 
 class Course(BaseModel):
     name: str
-    course_id: str
-    class_id: float
-    teacher: Optional[str] = None
-    credit: float
-    time: Optional[str] = None
-    location: Optional[str] = None
     note: Optional[str] = None
+    time: Optional[str] = None
+    credit: float
+    teacher: Optional[str] = None
+    class_id: float
+    location: Optional[str] = None
+    course_id: str
