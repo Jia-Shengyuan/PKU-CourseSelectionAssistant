@@ -2,8 +2,9 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
-import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, searchCourseEvaluation, getCourseEvaluation } from '@/api/course'
+import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation } from '@/api/course'
 import { getConfig, saveConfig } from '@/api/config'
+import { loginTreehole, searchTreehole } from '@/api/crawler'
 
 // 配置信息
 const formData = reactive({
@@ -17,7 +18,8 @@ const formData = reactive({
   apiKey: '',
   temperature: 0.7,
   topP: 0.9,
-  stream: true
+  stream: true,
+  chrome_user_data_dir: 'config/chrome_data'
 })
 
 // 存储原有学期
@@ -302,77 +304,94 @@ const handleCourseEvaluation = async () => {
     return
   }
 
-  // 初始化评价状态
-  courses.value.forEach(course => {
-    courseEvaluationStatus.value[course.name] = EvaluationStatus.QUEUED
-    courseEvaluationContent.value[course.name] = ''
-  })
+  try {
+    // 先登录树洞
+    ElMessage.info('正在登录树洞...')
+    await loginTreehole()
+    ElMessage.success('登录树洞成功')
 
-  // 设置第一个标签页为激活状态
-  if (courses.value.length > 0) {
-    activeEvaluationTab.value = courses.value[0].name
-  }
+    // 初始化评价状态
+    courses.value.forEach(course => {
+      courseEvaluationStatus.value[course.name] = EvaluationStatus.QUEUED
+      courseEvaluationContent.value[course.name] = ''
+    })
 
-  // 创建一个队列来存储待处理的课程
-  const courseQueue = [...courses.value]
-  let isSearching = false
-
-  // 处理树洞搜索的函数
-  const processSearch = async (course) => {
-    try {
-      // 更新状态为搜索中
-      courseEvaluationStatus.value[course.name] = EvaluationStatus.SEARCHING
-      
-      // 搜索树洞评价
-      const rawText = await searchCourseEvaluation(course.name)
-      
-      // 更新状态为评价中
-      courseEvaluationStatus.value[course.name] = EvaluationStatus.EVALUATING
-      
-      // 开始大模型评价（不等待完成）
-      processEvaluation(course, rawText)
-      
-      // 继续处理队列中的下一个课程
-      isSearching = false
-      processQueue()
-    } catch (error) {
-      console.error(`搜索课程 ${course.name} 评价失败:`, error)
-      ElMessage.error(`搜索课程 ${course.name} 评价失败`)
-      isSearching = false
-      processQueue()
-    }
-  }
-
-  // 处理大模型评价的函数
-  const processEvaluation = async (course, rawText) => {
-    try {
-      // 获取大模型评价
-      const evaluation = await getCourseEvaluation(course.name, rawText)
-      
-      // 更新评价内容
-      courseEvaluationContent.value[course.name] = evaluation
-      
-      // 更新状态为已完成
-      courseEvaluationStatus.value[course.name] = EvaluationStatus.COMPLETED
-    } catch (error) {
-      console.error(`评价课程 ${course.name} 失败:`, error)
-      ElMessage.error(`评价课程 ${course.name} 失败`)
-    }
-  }
-
-  // 处理队列中的课程
-  const processQueue = async () => {
-    if (isSearching || courseQueue.length === 0) {
-      return
+    // 设置第一个标签页为激活状态
+    if (courses.value.length > 0) {
+      activeEvaluationTab.value = courses.value[0].name
     }
 
-    isSearching = true
-    const course = courseQueue.shift()
-    processSearch(course)
-  }
+    // 创建一个队列来存储待处理的课程
+    const courseQueue = [...courses.value]
+    let isSearching = false
 
-  // 开始处理队列
-  processQueue()
+    // 处理树洞搜索的函数
+    const processSearch = async (course) => {
+      try {
+        // 更新状态为搜索中
+        courseEvaluationStatus.value[course.name] = EvaluationStatus.SEARCHING
+        
+        // 搜索树洞评价
+        const rawText = await searchTreehole(course.name)
+        
+        // 更新状态为评价中
+        courseEvaluationStatus.value[course.name] = EvaluationStatus.EVALUATING
+        
+        // 开始大模型评价（不等待完成）
+        processEvaluation(course, rawText)
+        
+        // 继续处理队列中的下一个课程
+        isSearching = false
+        processQueue()
+      } catch (error) {
+        console.error(`搜索课程 ${course.name} 评价失败:`, error)
+        ElMessage.error(`搜索课程 ${course.name} 评价失败`)
+        isSearching = false
+        processQueue()
+      }
+    }
+
+    // 处理大模型评价的函数
+    const processEvaluation = async (course, rawText) => {
+      try {
+        // 初始化评价内容
+        courseEvaluationContent.value[course.name] = ''
+        
+        // 获取大模型评价（流式）
+        await getCourseEvaluation(
+          course.name,
+          rawText,
+          (chunk) => {
+            // 更新评价内容
+            courseEvaluationContent.value[course.name] += chunk
+          }
+        )
+        
+        // 更新状态为已完成
+        courseEvaluationStatus.value[course.name] = EvaluationStatus.COMPLETED
+      } catch (error) {
+        console.error(`评价课程 ${course.name} 失败:`, error)
+        ElMessage.error(`评价课程 ${course.name} 失败`)
+      }
+    }
+
+    // 处理队列中的课程
+    const processQueue = async () => {
+      if (isSearching || courseQueue.length === 0) {
+        return
+      }
+
+      isSearching = true
+      const course = courseQueue.shift()
+      processSearch(course)
+    }
+
+    // 开始处理队列
+    processQueue()
+  } catch (error) {
+    console.error('登录树洞失败:', error)
+    ElMessage.error('登录树洞失败，请检查网络连接')
+  }
 }
 
 // 处理文件导入
@@ -424,7 +443,8 @@ const savePreference = async () => {
         portal_password: formData.password,
         grade: formData.grade,
         semester: formData.semester,
-        introduction: formData.userDescription
+        introduction: formData.userDescription,
+        chrome_user_data_dir: formData.chrome_user_data_dir
       },
       course: {
         course_list: courses.value.map(course => ({
@@ -488,6 +508,7 @@ const loadConfig = async () => {
     formData.grade = config.user.grade
     formData.semester = config.user.semester
     formData.userDescription = config.user.introduction
+    formData.chrome_user_data_dir = config.user.chrome_user_data_dir
 
     // 保存原始学期
     originalSemester.value = formData.semester

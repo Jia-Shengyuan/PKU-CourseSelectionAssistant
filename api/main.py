@@ -7,7 +7,8 @@ import json
 from api.models.course import Course, CourseSearchRequest, FetchCourseByPlanRequest
 from api.models.chat import EvaluateRequest, GenPlanRequest, TreeholeSearchRequest
 from api.models.config import ConfigData, CONFIG_PATH
-from api.models.crawler import TreeholeDriver
+# from api.models.crawler import TreeholeDriver
+from crawler.driver import TreeholeDriver
 from typing import List, Dict, Any
 from src.agent.llm import AsyncLLM
 from src.agent.settings import LLM_Settings
@@ -94,19 +95,29 @@ async def treehole_login() -> None:
     driver = TreeholeDriver()
     driver.login()
 
+@app.post("/crawler/close")
+async def treehole_close() -> None:
+    """
+    Close the treehole driver.
+    """
+    driver = TreeholeDriver()
+    # driver.close()
+
 @app.post("/crawler/search_courses")
 async def treehole_search(search_request: TreeholeSearchRequest) -> str:
     """
     Search treehole by course_name, and return the result.
     """
-
-    await asyncio.sleep(5)
-    return "Test response for class " + search_request.course_name + " with max_len " + str(search_request.max_len)
-
-    course = search_request.course_name
-    # 使用单例模式的driver
-    driver = TreeholeDriver.get_instance() # 假设你已经实现了单例(singleton)模式
-    return await asyncio.to_thread(search_treehole, course, driver, f"<html><body><h1>{course}</h1>", search_request.max_len)    
+    try:
+        course = search_request.course_name
+        # 使用单例模式的driver
+        # driver = TreeholeDriver.get_instance() # 假设你已经实现了单例(singleton)模式
+        html_content = f"<html><body><h1>{course}</h1>"
+        result = await asyncio.to_thread(search_treehole, course, html_content, search_request.max_len, 1, 0.5)
+        return result
+    except Exception as e:
+        print(f"搜索课程评价失败: {e}")
+        raise
 
 @app.post("/llm/evaluate")
 async def evaluate(evaluate_request: EvaluateRequest) -> StreamingResponse:
@@ -116,9 +127,24 @@ async def evaluate(evaluate_request: EvaluateRequest) -> StreamingResponse:
     pass
 
 @app.post("/llm/evaluate_test")
-async def evaluate_test(evaluate_request: EvaluateRequest) -> str:
-    await asyncio.sleep(10)
-    return evaluate_request.course_name + ": " + evaluate_request.raw_text
+async def evaluate_test(evaluate_request: EvaluateRequest) -> StreamingResponse:
+    """
+    模拟流式输出，将输入的raw_text按行分割并逐行返回
+    """
+    async def generate_response():
+        # 按行分割文本
+        lines = evaluate_request.raw_text.split('\n')
+        
+        # 逐行返回，每行之间添加短暂延迟
+        for line in lines:
+            if line.strip():  # 跳过空行
+                yield line + "\n"
+                await asyncio.sleep(0.5)  # 每行之间暂停0.5秒
+
+    return StreamingResponse(
+        generate_response(),
+        media_type="text/plain"
+    )
 
 @app.post("/llm/plan")
 async def gen_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:

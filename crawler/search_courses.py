@@ -1,10 +1,13 @@
 import time
+import os
+
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from api.models.crawler import TreeholeDriver  # 加上这行，使用 TreeholeDriver 单例
+from crawler.driver import TreeholeDriver
+from crawler.utils import data_folder_path, to_safe_filename
 
 def click_back_button(driver):
     try:
@@ -29,8 +32,17 @@ def getshort(course_name):
         ans += element
     return ans.strip()
 
-def search_treehole(course_name: str, html_content: str, max_len: int = 5) -> str:
-    driver = TreeholeDriver.get_instance()  # ✅ 单例获取 driver
+def search_treehole(course_name: str, html_content: str, max_len: int = 5, sleep_after_search: float = 1, sleep_between_scroll: float = 0.3, save_results: bool = True, acceppt_saved_resuults: bool = True) -> str:
+    
+    # If accpect saved results, and the corresponding file exists, then just return without searching again.
+    if acceppt_saved_resuults:
+        filename = f"{to_safe_filename(course_name)}.html"
+        if os.path.exists(os.path.join(data_folder_path, filename)):
+            with open(os.path.join(data_folder_path, filename), "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return html_content
+
+    driver = TreeholeDriver.get_instance()
     course_name_short = getshort(course_name)
     select_name = course_name + " 测评"
     print("!" + course_name_short + "!")
@@ -42,7 +54,7 @@ def search_treehole(course_name: str, html_content: str, max_len: int = 5) -> st
         search_input.clear()
         search_input.send_keys(select_name)
         search_input.send_keys(Keys.RETURN)
-        time.sleep(1)
+        time.sleep(sleep_after_search)
 
         posts = WebDriverWait(driver, 2).until(
             EC.presence_of_all_elements_located((By.XPATH, '//*[@id="table_list"]/div/div'))
@@ -70,7 +82,7 @@ def search_treehole(course_name: str, html_content: str, max_len: int = 5) -> st
 
                 while True:
                     driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", comment_section)
-                    time.sleep(0.3)
+                    time.sleep(sleep_between_scroll)
                     new_height = driver.execute_script("return arguments[0].scrollHeight", comment_section)
                     if new_height == last_height:
                         break
@@ -95,5 +107,10 @@ def search_treehole(course_name: str, html_content: str, max_len: int = 5) -> st
 
     except Exception as e:
         print(f"发生错误: {e}")
+
+    if save_results:
+        filename = f"{to_safe_filename(course_name)}.html"
+        with open(os.path.join(data_folder_path, filename), "w", encoding="utf-8") as f:
+            f.write(html_content)
     
     return html_content
