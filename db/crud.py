@@ -15,17 +15,25 @@ def create_course(db: Session, course: CourseCreate):
     db.refresh(db_course)
     return db_course
 
-def get_courses_by_name(db: Session, name: str):
+def get_courses_by_name(db: Session, name: str, fuzzy_matching: bool):
     # 罗马数字 → 阿拉伯数字 对照表
 
-    target = normalize_name(name)
+    target = ""
+    if fuzzy_matching:
+        target = normalize_name(name)
+    else:
+        target = name
 
     all_courses = db.query(DbCourse).all()
     matched_courses = []
 
     for dbcourse in all_courses:
-        n_name = normalize_name(dbcourse.name)
-        if n_name == target:
+        course_name = ""
+        if fuzzy_matching:
+            course_name = normalize_name(dbcourse.name)
+        else:
+            course_name = dbcourse.name
+        if course_name == target:
             course=Course(name=dbcourse.name,
                           course_id=dbcourse.course_id,
                           class_id=dbcourse.class_id,
