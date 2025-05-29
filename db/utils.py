@@ -19,6 +19,21 @@ def normalize_name(name: str) -> str:
         name = name.replace(kanji, arabic)
     return name.lower()
 
+def read_pdf(pdf_path):
+    results = ""
+    useful_info = False
+
+    with pdfplumber.open(pdf_path) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            for line in text.splitlines():
+                if "毕业总学分" in line:
+                    useful_info = True
+                if useful_info:
+                    results = results + line + "\n"
+    
+    return results
+
 def extract_courses_from_pdf(pdf_path, target_grade, target_semester):
     courses = []
 

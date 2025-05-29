@@ -12,7 +12,7 @@ from crawler.driver import TreeholeDriver
 from typing import List, Dict, Any
 from src.agent.llm import AsyncLLM
 from src.agent.settings import LLM_Settings
-from db.interface import activate_database_, get_course_info_, fetch_course_by_plan_
+from db.interface import activate_database_, get_course_info_, read_pdf_plan_, fetch_course_by_plan_
 import os
 from crawler.search_courses import search_treehole
 ''' I think this may be the entrance of this project.'''
@@ -75,9 +75,17 @@ async def get_course_info(course_request: CourseSearchRequest) -> List[Course]:
     print("Get course request : " + str(course_request))
 
     return get_course_info_(course_request)
+
+@app.post("/course/plan_str")
+async def read_pdf_plan(pdf_path: str) -> str:
+    """
+    Read the pdf of plan, return the overall string.
+    """
+
+    return read_pdf_plan_(pdf_path)
     
 
-@app.post("/course/plan")
+@app.post("/course/plan_info")
 async def fetch_course_by_plan(fetch_request: FetchCourseByPlanRequest) -> List[Course]: 
     """
     Fetch course by plan, given semester, grade and plan_path.

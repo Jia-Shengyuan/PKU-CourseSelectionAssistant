@@ -1,9 +1,10 @@
 import re
+import pdfplumber
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from api.models.course import Course, CourseSearchRequest, FetchCourseByPlanRequest
 from db.crud import get_courses_by_name, get_courses_by_id_
-from db.utils import normalize_name, extract_courses_from_pdf
+from db.utils import normalize_name, extract_courses_from_pdf, read_pdf
 from db.dbmodel.dbcourse import DbCourse
 
 SessionLocal = None
@@ -67,6 +68,9 @@ def get_courses_by_id(id: str):
     courses = get_courses_by_id_(db, id)
     return courses
 
+def read_pdf_plan_(pdf_path: str):
+    return read_pdf(pdf_path)
+
 def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
     semester = fetch_request.semester
     grade = fetch_request.grade
@@ -88,6 +92,7 @@ def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
 
 if __name__ == "__main__":
     activate_database_("2024-2025-2")
-    print(get_course_info_(CourseSearchRequest(name="代数学2", fuzzy_matching=True, accept_advanced_class=True)))
+    print(read_pdf_plan_("./config/plan.pdf"))
+    #print(get_course_info_(CourseSearchRequest(name="代数学2", fuzzy_matching=True, accept_advanced_class=True)))
     #print(get_courses_by_id(id="132302"))
     #print(fetch_course_by_plan_(FetchCourseByPlanRequest(semester="2024-2025-2", grade="大一", plan_path="./config/plan.pdf", experimental_class=True)))
