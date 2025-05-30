@@ -28,7 +28,7 @@ def main():
         for course in course_list:        
             # 初始的 HTML 内容
             html_content = f"<html><body><h1>{course}</h1>"
-            html_content = search_treehole(course, html_content, 5)  # 修正参数顺序
+            html_content = search_treehole(course, html_content, 10)  # 修正参数顺序
             html_content += "</body></html>"
             safe_course_name = "".join(c for c in course if c.isalnum() or c in (' ', '_')).rstrip()
             filename = f"{safe_course_name}.html"
