@@ -151,12 +151,7 @@ export const readPlanPDF = async () => {
 
 export const genPlan = async (requestData) => {
     try {
-        const response = await axios.post(`${BASE_URL}/llm/plan`, requestData, {
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            }
-        })
+        const response = await axios.post(`${BASE_URL}/llm/plan`, requestData)
         return response.data
     } catch (error) {
         console.error('生成选课方案失败:', error)

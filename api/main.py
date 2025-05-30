@@ -23,7 +23,7 @@ app = FastAPI()
 # 配置CORS中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 允许所有来源，生产环境中应该限制为特定域名
+    allow_origins=["http://localhost:5173"],  # 允许所有来源，生产环境中应该限制为特定域名
     allow_credentials=True,
     allow_methods=["*"],  # 允许所有方法
     allow_headers=["*"],  # 允许所有头部
@@ -193,9 +193,12 @@ async def gen_plan_stream(gen_plan_request: GenPlanRequest) -> StreamingResponse
     )
 
 @app.post("/llm/plan")
-async def gen_plan(gen_plan_request: GenPlanRequest) -> List[List[Course]]:
+async def gen_plan(gen_plan_request: GenPlanRequest):
     """
     生成选课方案，返回一个List[List[Course]]，表示所有选课方案。
     其中每个List[Course]表示一组选课方案。
     """
-    return [[Course(id=1, name="高等数学", teacher="张三", time="1-2节", location="东区101")]]
+    return [[Course(name="数学分析", class_id=1, course_id="3", teacher="lwg"),
+             Course(name="高等代数", class_id=1, course_id="2", teacher="wfz")],
+             
+            [Course(name="恨基础", class_id=2, course_id="2", teacher="dh")]]
