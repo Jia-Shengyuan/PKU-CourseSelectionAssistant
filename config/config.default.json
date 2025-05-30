@@ -12,20 +12,25 @@
     "user": {
         "student_id": "",
         "portal_password": "",
-        "semester": "2024-2025-2",
-        "grade": "大一",
-        "introduction": "",
-        "chrome_user_data_dir":"config/chrome_data"
+        "semester": "",
+        "grade": "",
+        "introduction": ""
     },
 
     "course": {
-        "course_list": [
-            {"name": "数学分析", "class_ids": [1, 3]},
-            {"name": "高等代数", "class_ids": [1, 2]},
-            {"name": "概率论", "class_ids": [1, 4]}
-        ],
+        "course_list": [],
         "min_credit": 20,
         "max_credit": 24,
-        "preference" : ""
+        "preference" : "",
+        "num_timetable": 1
+    }, 
+
+    "crawler": {
+        "chrome_user_data_dir": "config\\chrome_data",
+        "num_search": 5,
+        "sleep_after_search": 5,
+        "sleep_between_scroll": 0.5,
+        "sleep_random_range": 0.1
     }
+
 }

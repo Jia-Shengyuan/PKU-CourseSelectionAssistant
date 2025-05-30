@@ -26,7 +26,7 @@ def is_logged_in(driver):
 
 def login():
     config = get_config()
-    chrome_user_data_dir = config["user"].get("chrome_user_data_dir")
+    chrome_user_data_dir = config["crawler"].get("chrome_user_data_dir")
 
     if not chrome_user_data_dir or not os.path.exists(chrome_user_data_dir):
         raise ValueError("请在 config.json 中设置有效的 Chrome 用户数据目录（chrome_user_data_dir）")
@@ -64,7 +64,7 @@ def new_login():
     功能与login()完全相同，只是自动处理ChromeDriver版本
     """
     config = get_config()
-    chrome_user_data_dir = config["user"].get("chrome_user_data_dir")
+    chrome_user_data_dir = config["crawler"].get("chrome_user_data_dir")
 
     if not chrome_user_data_dir:
         raise ValueError("请在 config.json 中设置 Chrome 用户数据目录（chrome_user_data_dir）")

@@ -17,10 +17,10 @@ class FetchCourseByPlanRequest(BaseModel):
 
 class Course(BaseModel):
     name: str
+    class_id: int # ??? who changed it to float?
+    course_id: str
     note: Optional[str] = None
     time: Optional[str] = None
     credit: Optional[float] = 0
     teacher: Optional[str] = None
-    class_id: float
     location: Optional[str] = None
-    course_id: str

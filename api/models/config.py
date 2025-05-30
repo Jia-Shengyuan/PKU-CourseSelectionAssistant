@@ -7,3 +7,4 @@ class ConfigData(BaseModel):
     model: Dict[str, Any]
     user: Dict[str, Any]
     course: Dict[str, Any]
+    crawler: Dict[str, Any]

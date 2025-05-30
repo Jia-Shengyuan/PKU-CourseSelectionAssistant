@@ -24,3 +24,12 @@ export const searchTreehole = async (courseName) => {
       throw error;
     }
   };
+
+export const closeTreehole = async () => {
+  try {
+    await axios.post(`${BASE_URL}/crawler/close`)
+  } catch (error) {
+    console.error('关闭树洞网页失败:', error)
+    throw error
+  }
+}

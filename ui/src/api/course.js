@@ -66,11 +66,9 @@ export const fetchCourseByPlan = async (semester, grade, plan_path) => {
 }
 
 export const courseDataToMapArray = (courseData) => {
-
     const courseMap = new Map()
     
     courseData.forEach(course => {
-
         if(!course || course.name === "Not found") {
             return
         }
@@ -85,12 +83,14 @@ export const courseDataToMapArray = (courseData) => {
             id: course.class_id.toString(),
             teacher: course.teacher,
             time: course.time,
-            location: course.location
+            location: course.location,
+            course_id: course.course_id,
+            note: course.note,
+            credit: course.credit
         })
     })
 
     return Array.from(courseMap.values())
-
 }
 
 /**
@@ -106,8 +106,6 @@ export const activateDatabase = async (semester) => {
         throw error
     }
 }
-
-
 
 // 获取课程评价
 export const getCourseEvaluation = async (courseName, rawText, onChunk) => {
@@ -140,3 +138,28 @@ export const getCourseEvaluation = async (courseName, rawText, onChunk) => {
     throw error;
   }
 };
+
+export const readPlanPDF = async () => {
+    try {
+        const response = await axios.post(`${BASE_URL}/course/plan_pdf`)
+        return response.data
+    } catch (error) {
+        console.error('读取培养方案失败:', error)
+        throw error
+    }
+}
+
+export const genPlan = async (requestData) => {
+    try {
+        const response = await axios.post(`${BASE_URL}/llm/plan`, requestData, {
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        })
+        return response.data
+    } catch (error) {
+        console.error('生成选课方案失败:', error)
+        throw error
+    }
+}

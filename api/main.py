@@ -33,10 +33,26 @@ app.add_middleware(
 async def get_config() -> ConfigData:
     """
     获取配置文件内容
+    如果config.json不存在，则从config.default.json读取默认配置并保存
     """
     try:
-        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
-            config = json.load(f)
+        if not os.path.exists(CONFIG_PATH):
+            # config/config.default.json
+            default_config_path = os.path.join(os.path.dirname(CONFIG_PATH), 'config.default.json')
+            if not os.path.exists(default_config_path):
+                raise FileNotFoundError("默认配置文件不存在")
+            
+            with open(default_config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+            
+            os.makedirs(os.path.dirname(CONFIG_PATH), exist_ok=True)
+            
+            with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+                json.dump(config, f, ensure_ascii=False, indent=4)
+        else:
+            with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+        
         return ConfigData(**config)
     except Exception as e:
         print(f"Error reading config: {e}")
@@ -76,16 +92,16 @@ async def get_course_info(course_request: CourseSearchRequest) -> List[Course]:
 
     return get_course_info_(course_request)
 
-@app.post("/course/plan_str")
-async def read_pdf_plan(pdf_path: str) -> str:
+@app.post("/course/plan_pdf")
+async def read_pdf_plan() -> str:
     """
     Read the pdf of plan, return the overall string.
     """
 
-    return read_pdf_plan_(pdf_path)
+    return read_pdf_plan_('config/plan.pdf')
     
 
-@app.post("/course/plan_info")
+@app.post("/course/plan")
 async def fetch_course_by_plan(fetch_request: FetchCourseByPlanRequest) -> List[Course]: 
     """
     Fetch course by plan, given semester, grade and plan_path.
@@ -147,15 +163,15 @@ async def evaluate_test(evaluate_request: EvaluateRequest) -> StreamingResponse:
         for line in lines:
             if line.strip():  # 跳过空行
                 yield line + "\n"
-                await asyncio.sleep(0.5)  # 每行之间暂停0.5秒
+                await asyncio.sleep(0.01)  # 每行之间暂停0.5秒
 
     return StreamingResponse(
         generate_response(),
         media_type="text/plain"
     )
 
-@app.post("/llm/plan")
-async def gen_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:
+@app.post("/llm/plan_stream")
+async def gen_plan_stream(gen_plan_request: GenPlanRequest) -> StreamingResponse:
     """
     生成选课方案，使用流式响应逐个返回每个方案。
     每个方案是一个List[Course]，表示一组选课组合。
@@ -175,3 +191,11 @@ async def gen_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:
         generate_plans(),
         media_type="application/x-ndjson"  # 使用newline-delimited JSON格式
     )
+
+@app.post("/llm/plan")
+async def gen_plan(gen_plan_request: GenPlanRequest) -> List[List[Course]]:
+    """
+    生成选课方案，返回一个List[List[Course]]，表示所有选课方案。
+    其中每个List[Course]表示一组选课方案。
+    """
+    return [[Course(id=1, name="高等数学", teacher="张三", time="1-2节", location="东区101")]]

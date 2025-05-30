@@ -19,7 +19,7 @@ class EvaluatedCourse(BaseModel):
 class GenPlanRequest(BaseModel):
     all_classes: List[EvaluatedCourse] # 每门课为一项
     user_description: str
-    plan: str # 培养方案，你看是前端给你还是你自己读？
+    plan: str # 培养方案
     class_choosing_preference: str
     min_credits: int
     max_credits: int

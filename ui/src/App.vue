@@ -2,10 +2,10 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
-import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation } from '@/api/course'
+import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan } from '@/api/course'
 import { getConfig, saveConfig } from '@/api/config'
 import { loginTreehole, searchTreehole } from '@/api/crawler'
-
+import { generateTableData } from '@/api/timetable'
 // 配置信息
 const formData = reactive({
   studentId: '',
@@ -19,7 +19,12 @@ const formData = reactive({
   temperature: 0.7,
   topP: 0.9,
   stream: true,
-  chrome_user_data_dir: 'config/chrome_data'
+  chrome_user_data_dir: 'config/chrome_data',
+  num_timetable: 1,
+  num_search: 5,
+  sleep_after_search: 5,
+  sleep_between_scroll: 0.5,
+  sleep_random_range: 0.1
 })
 
 // 存储原有学期
@@ -293,12 +298,10 @@ const EvaluationStatus = {
   COMPLETED: '已完成'
 }
 
-// 处理课程评价
+const timetables = ref([]) // 存储所有课表
+const activeTimetableIndex = ref(0) // 当前显示的课表索引
+
 const handleCourseEvaluation = async () => {
-  if (!formData.studentId || !formData.password) {
-    ElMessage.warning('请填写学号和密码')
-    return
-  }
   if (courses.value.length === 0) {
     ElMessage.warning('请至少添加一门课程')
     return
@@ -369,6 +372,16 @@ const handleCourseEvaluation = async () => {
         
         // 更新状态为已完成
         courseEvaluationStatus.value[course.name] = EvaluationStatus.COMPLETED
+
+        // 检查是否所有课程都已完成评价
+        const allCompleted = courses.value.every(
+          course => courseEvaluationStatus.value[course.name] === EvaluationStatus.COMPLETED
+        )
+
+        if (allCompleted) {
+          // 所有课程评价完成，生成课表
+          await generateTimetables()
+        }
       } catch (error) {
         console.error(`评价课程 ${course.name} 失败:`, error)
         ElMessage.error(`评价课程 ${course.name} 失败`)
@@ -391,6 +404,50 @@ const handleCourseEvaluation = async () => {
   } catch (error) {
     console.error('登录树洞失败:', error)
     ElMessage.error('登录树洞失败，请检查网络连接')
+  }
+}
+
+// 生成课表
+const generateTimetables = async () => {
+  try {
+    // 准备课程评价数据
+    const allClasses = courses.value.map(course => ({
+      course_name: course.name,
+      summary: courseEvaluationContent.value[course.name],
+      choices: course.classes.map(c => ({
+        name: course.name,
+        class_id: parseInt(c.id),
+        course_id: c.course_id,
+        note: c.note,
+        time: c.time,
+        credit: c.credit,
+        teacher: c.teacher,
+        location: c.location
+      }))
+    }))
+
+    const plan = await readPlanPDF()
+
+    const requestData = {
+      all_classes: allClasses,
+      user_description: formData.userDescription,
+      plan: plan,
+      class_choosing_preference: coursePreference.value,
+      min_credits: minCredits.value,
+      max_credits: maxCredits.value,
+      num_plans: formData.num_timetable
+    }
+
+    console.log('发送的请求数据:', requestData)  // 添加日志
+
+    const response = await genPlan(requestData)
+    timetables.value = response
+    activeTimetableIndex.value = 0
+
+    ElMessage.success('课表生成成功')
+  } catch (error) {
+    console.error('生成课表失败:', error)
+    ElMessage.error('生成课表失败')
   }
 }
 
@@ -443,8 +500,7 @@ const savePreference = async () => {
         portal_password: formData.password,
         grade: formData.grade,
         semester: formData.semester,
-        introduction: formData.userDescription,
-        chrome_user_data_dir: formData.chrome_user_data_dir
+        introduction: formData.userDescription
       },
       course: {
         course_list: courses.value.map(course => ({
@@ -453,7 +509,15 @@ const savePreference = async () => {
         })),
         min_credit: minCredits.value,
         max_credit: maxCredits.value,
-        preference: coursePreference.value
+        preference: coursePreference.value,
+        num_timetable: formData.num_timetable
+      },
+      crawler: {
+        chrome_user_data_dir: formData.chrome_user_data_dir,
+        num_search: formData.num_search,
+        sleep_after_search: formData.sleep_after_search,
+        sleep_between_scroll: formData.sleep_between_scroll,
+        sleep_random_range: formData.sleep_random_range
       }
     }
     
@@ -508,7 +572,14 @@ const loadConfig = async () => {
     formData.grade = config.user.grade
     formData.semester = config.user.semester
     formData.userDescription = config.user.introduction
-    formData.chrome_user_data_dir = config.user.chrome_user_data_dir
+    formData.chrome_user_data_dir = config.crawler.chrome_user_data_dir
+
+    // 新增配置项
+    formData.num_timetable = config.course.num_timetable
+    formData.num_search = config.crawler.num_search
+    formData.sleep_after_search = config.crawler.sleep_after_search
+    formData.sleep_between_scroll = config.crawler.sleep_between_scroll
+    formData.sleep_random_range = config.crawler.sleep_random_range
 
     // 保存原始学期
     originalSemester.value = formData.semester
@@ -534,10 +605,46 @@ const loadConfig = async () => {
   }
 }
 
-// 在组件挂载时加载配置
-onMounted(() => {
-  // fetchCourseInfo() is replaced by loadConfig()
-  loadConfig()
+// 删除所有课程
+const deleteAllCourses = () => {
+  ElMessageBox.confirm(
+    '确定要删除所有课程吗？此操作不可恢复。',
+    '删除确认',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    courses.value = []
+    ElMessage.success('已删除所有课程')
+  }).catch(() => {
+    // 用户取消删除，不做任何操作
+  })
+}
+
+// 生成表格数据
+/*const generateTableData = (timetable) => {
+  const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+  const periods = Array.from({ length: 12 }, (_, i) => i + 1)
+  
+  return periods.map(period => {
+    const row = { time: `第${period}节` }
+    days.forEach((day, dayIndex) => {
+      // 每两节课为一组
+      const courseIndex = Math.floor(period / 2)
+      if (period % 2 === 1 && timetable[courseIndex]) {
+        row[day] = timetable[courseIndex]
+      }
+    })
+    return row
+  })
+}*/
+
+onMounted(async () => {
+  // const plan_pdf = await readPlanPDF()
+  // console.log(plan_pdf)
+  await loadConfig()
 })
 </script>
 
@@ -551,21 +658,14 @@ onMounted(() => {
       </template>
       <el-form :model="formData" label-width="80px">
         <el-row :gutter="20">
-          <el-col :span="8">
-            <el-form-item label="学号">
-              <el-input v-model="formData.studentId" placeholder="请输入学号" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="8">
-            <el-form-item label="门户密码">
-              <el-input v-model="formData.password" type="password" placeholder="请输入密码" />
-            </el-form-item>
+          <el-col :span="24">
+            <el-divider content-position="left">用户配置</el-divider>
           </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :span="8">
             <el-form-item label="年级">
-              <el-input v-model="formData.grade" placeholder="请输入年级（如大一下）" />
+              <el-input v-model="formData.grade" placeholder="请输入年级（如大一）" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
@@ -589,6 +689,11 @@ onMounted(() => {
                 placeholder="您可以在此进行自我介绍，帮助大模型更好地了解您"
               />
             </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-divider content-position="left">大模型配置</el-divider>
           </el-col>
         </el-row>
         <el-row :gutter="20">
@@ -634,6 +739,56 @@ onMounted(() => {
             </el-form-item>
           </el-col>
         </el-row>
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-divider content-position="left">爬虫配置</el-divider>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="搜索评测数" label-width="100px">
+              <el-input-number 
+                v-model="formData.num_search" 
+                :min="1" 
+                :max="20"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="搜索后等待" label-width="100px">
+              <el-input-number 
+                v-model="formData.sleep_after_search" 
+                :min="1" 
+                :max="30"
+                :step="1"
+              />
+              <span class="unit-label">秒</span>
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="滚动等待" label-width="100px">
+              <el-input-number 
+                v-model="formData.sleep_between_scroll" 
+                :min="0.1" 
+                :max="2"
+                :step="0.1"
+              />
+              <span class="unit-label">秒</span>
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="随机比例" label-width="100px">
+              <el-input-number 
+                v-model="formData.sleep_random_range" 
+                :min="0" 
+                :max="1"
+                :step="0.1"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
     </el-card>
 
@@ -642,6 +797,7 @@ onMounted(() => {
         <div class="card-header">
           <span>课程列表</span>
           <div class="button-group">
+            <el-button type="danger" @click="deleteAllCourses">删除所有课程</el-button>
             <el-button type="success" @click="handleFileImport">导入培养方案</el-button>
             <el-button type="primary" @click="showAddCourseDialog">手动添加课程</el-button>
           </div>
@@ -704,6 +860,13 @@ onMounted(() => {
               :min="0" 
               :max="100"
               @change="handleMaxCreditsChange"
+            />
+          </el-form-item>
+          <el-form-item label="生成课表数">
+            <el-input-number 
+              v-model="formData.num_timetable" 
+              :min="1" 
+              :max="10"
             />
           </el-form-item>
         </div>
@@ -831,6 +994,52 @@ onMounted(() => {
         </span>
       </template>
     </el-dialog>
+
+    <!-- 课表展示区域 -->
+    <el-card v-if="timetables.length > 0" class="timetable-card">
+      <template #header>
+        <div class="card-header">
+          <span>课表方案</span>
+          <div class="timetable-tabs">
+            <el-radio-group v-model="activeTimetableIndex">
+              <el-radio-button 
+                v-for="(_, index) in timetables" 
+                :key="index" 
+                :label="index"
+              >
+                方案 {{ index + 1 }}
+              </el-radio-button>
+            </el-radio-group>
+          </div>
+        </div>
+      </template>
+      
+      <el-table
+        :data="generateTableData(timetables[activeTimetableIndex])"
+        border
+        style="width: 100%"
+      >
+        <el-table-column
+          prop="time"
+          label="节次"
+          width="80"
+          fixed
+        />
+        <el-table-column
+          v-for="day in ['周一', '周二', '周三', '周四', '周五', '周六', '周日']"
+          :key="day"
+          :label="day"
+        >
+          <template #default="scope">
+            <div v-if="scope.row[day]" class="course-cell">
+              <div class="course-name">{{ scope.row[day].name }}</div>
+              <div class="course-teacher">{{ scope.row[day].teacher }}</div>
+              <div class="course-location">{{ scope.row[day].location }}</div>
+            </div>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
   </div>
 </template>
 
@@ -1073,5 +1282,39 @@ body {
 :deep(.el-tabs__item.is-active) {
   color: #409eff;
   border-bottom: 2px solid #409eff;
+}
+
+.unit-label {
+  margin-left: 8px;
+  color: #606266;
+}
+
+.timetable-card {
+  margin-top: 20px;
+}
+
+.timetable-tabs {
+  margin-left: 20px;
+}
+
+.course-cell {
+  padding: 8px;
+  text-align: center;
+}
+
+.course-name {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.course-teacher {
+  color: #666;
+  font-size: 0.9em;
+  margin-bottom: 2px;
+}
+
+.course-location {
+  color: #999;
+  font-size: 0.8em;
 }
 </style>
