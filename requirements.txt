@@ -8,13 +8,6 @@ pandas
 openai
 rich
 requests
-html
 selenium
-time
-sys
-os
-json
-pickle
-urllib
 openpyxl
 webdriver-manager
