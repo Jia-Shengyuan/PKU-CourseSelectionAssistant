@@ -15,12 +15,12 @@ class RawComment:
             "role": "user", 
             "content": f"根据评价,先总体详细介绍一下课程: {course_name}, 再从按老师从优到劣推荐课程 \
             你只用给出以下老师的具体评价: {",".join(teachers)}, \
-            从给分,任务量,教学质量三个角度评价课程, 老师的名称只保留拼音缩写" 
+            从给分,任务量,教学质量三个角度评价课程, 老师的名称只保留原名" 
 '''
 格式严格仿照以下格式
 电磁字课程总体评价:
 电磁学作为物理系的核心课程，内容涵盖静电场、静磁场、麦克斯韦方程组等，理论性较强但应用
-泛。课程难度中等偏上，需要较好的数学基础(尤其是矢量分析和微积分)。大多数老师采用课堂讲授+作业+考试的模式，部
+泛。(课程难度)课程难度中等偏上，需要较好的数学基础(尤其是矢量分析和微积分)。(考核方式)大多数老师采用课堂讲授+作业+考试的模式，部
 分老师会加入演示实验或数值模拟内容。
 从往届学生反馈来看，电磁学的教学质量整体较好，但不同老师的授课风格和考核方式差异较大。
 、下是按推荐程度排序的教师评价:
@@ -77,6 +77,7 @@ class Evaluator:
         logger.log(Markdown(full_response))
         file_path = Path("selevaluator/data") / f"{self.course.course_name}.txt"  # 自动处理路径分隔符
         with open(file_path, 'w', encoding='utf-8') as file:
-            file.write(full_response)
+            if (len(full_response) > 100):
+                file.write(full_response)
         return
 
