@@ -10,8 +10,10 @@ from api.models.config import ConfigData, CONFIG_PATH
 # from api.models.crawler import TreeholeDriver
 from crawler.driver import TreeholeDriver
 from typing import List, Dict, Any
-from src.agent.llm import AsyncLLM
-from src.agent.settings import LLM_Settings
+from selevaluator.agent.llm import AsyncLLM
+from selevaluator.agent.settings import LLM_Settings
+from selevaluator.evaluator import RawComment, Evaluator
+from selevaluator.selector import generate_single_plan
 from db.interface import activate_database_, get_course_info_, read_pdf_plan_, fetch_course_by_plan_
 import os
 from crawler.search_courses import search_treehole
@@ -143,14 +145,18 @@ async def treehole_search(search_request: TreeholeSearchRequest) -> str:
         print(f"搜索课程评价失败: {e}")
         raise
 
-@app.post("/llm/evaluate")
+@app.post("/llm/evaluate_test")
 async def evaluate(evaluate_request: EvaluateRequest) -> StreamingResponse:
     """
     Evaluate the course by class_name and raw_text.
     """
-    pass
+    E = Evaluator(evaluate_request)
+    return StreamingResponse(
+        E.evaluate(),
+        media_type="text/plain"
+    )
 
-@app.post("/llm/evaluate_test")
+@app.post("/llm/evaluate")
 async def evaluate_test(evaluate_request: EvaluateRequest) -> StreamingResponse:
     """
     模拟流式输出，将输入的raw_text按行分割并逐行返回
