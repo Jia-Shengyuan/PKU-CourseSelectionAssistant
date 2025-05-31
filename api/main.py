@@ -187,7 +187,7 @@ async def gen_plan_stream(gen_plan_request: GenPlanRequest) -> StreamingResponse
         for i in range(gen_plan_request.num_plans):
             # 这里调用大模型生成一个选课方案
             # 实际上，这些课程可能都是由同一次大模型调用生成的，所以你可以考虑和大模型约定输出格式，一次生成结束之后怎么标记一下
-            plan = await generate_single_plan(gen_plan_request)  # 这个函数需要你实现
+            plan = await generate_single_plan(gen_plan_request, display=True)  # 这个函数需要你实现
             # 将方案转换为JSON字符串并返回
             yield json.dumps(plan, ensure_ascii=False) + "\n"
             # 可选：在方案之间添加短暂延迟
