@@ -82,7 +82,7 @@ async def generate_single_plan(data : GenPlanRequest, display : bool = False):
     except Exception as e:
         logger.log_error(e)
     list_of_id_and_time = full_response.split('|')
-    for txt in list_of_id_and_time:
+    for txt in list_of_id_and_time: #需要一些确保稳定性的判断
         class_id, time_str = list_of_id_and_time.split(':')
         class_id = int(class_id)
         ChosenCourses #待补充
