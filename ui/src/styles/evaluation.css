@@ -1,0 +1,45 @@
+/*
+  课程评价与状态相关样式
+*/
+
+.evaluation-card {
+  margin-top: 20px;
+}
+
+.evaluation-content {
+  padding: 20px;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.status-badge.队列中 {
+  background-color: #909399;
+  color: white;
+}
+
+.status-badge.搜索中 {
+  background-color: #409eff;
+  color: white;
+}
+
+.status-badge.评价中 {
+  background-color: #e6a23c;
+  color: white;
+}
+
+.status-badge.已完成 {
+  background-color: #67c23a;
+  color: white;
+}
+
+.evaluation-text {
+  white-space: pre-wrap;
+  line-height: 1.6;
+  color: #303133;
+}

@@ -1,0 +1,29 @@
+/*
+  课程相关样式，供 App.vue 等组件全局或局部引入
+*/
+
+.course-cell {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0px;
+  text-align: center;
+  background-clip: padding-box;
+}
+
+.course-name {
+  font-weight: bold;
+  margin-bottom: 4px;
+  font-size: 1em; /* 略微放大课程名称字体 */
+}
+
+.course-teacher {
+  color: #666;
+  font-size: 0.9em;
+  margin-bottom: 2px;
+}
+
+.course-location {
+  color: #999;
+  font-size: 0.8em;
+}

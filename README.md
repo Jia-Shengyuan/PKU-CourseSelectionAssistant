@@ -1,5 +1,33 @@
 # PKU Course Selection Assistant
 
+## 环境配置
+
+### Python环境配置
+1. 安装 Python (推荐 3.9 或更高版本)
+   - 访问 [Python官网](https://www.python.org/) 下载并安装
+   - 确保Python已添加到系统环境变量
+
+2. 安装依赖包
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### 前端环境配置
+1. 安装 Node.js
+   - 访问 [Node.js 官网](https://nodejs.org/) 下载并安装
+   - 建议安装 LTS（长期支持）版本
+
+2. 安装 pnpm
+   ```bash
+   npm install -g pnpm
+   ```
+
+3. 安装前端依赖
+   ```bash
+   cd ui
+   pnpm install
+   ```
+
 ## 项目运行
 
 项目的运行需要同时启用前后端

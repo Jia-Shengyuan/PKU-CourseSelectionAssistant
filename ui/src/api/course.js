@@ -8,12 +8,14 @@ import { BASE_URL } from '@/config'
  * @param {string|null} [teacher=null] - 教师姓名，可选
  * @returns {Promise<Array>} 返回课程信息数组
  */
-export const fetchCourse = async (course_name, class_id = null, teacher = null) => {
+export const fetchCourse = async (course_name, class_id = null, teacher = null, accept_advance = true, fuzzy_match = true) => {
     try {
         const response = await axios.post(`${BASE_URL}/course/info`, {
             name: course_name,
             class_id: class_id,
-            teacher: teacher
+            teacher: teacher,
+            fuzzy_matching: fuzzy_match,
+            accept_advanced_class: accept_advance
         })
         return response.data
     } catch (error) {
@@ -39,7 +41,7 @@ export const fetchCourseRawInfo = async (courses_raw) => {
 
         // 使用Promise.all并行处理所有请求
         const responses = await Promise.all(
-            courseRequests.map(request => fetchCourse(request.name, request.class_id))
+            courseRequests.map(request => fetchCourse(request.name, request.class_id, null, false, false))
         )
         
         // responses : List[List[Course]], 需要转换为List[Course]

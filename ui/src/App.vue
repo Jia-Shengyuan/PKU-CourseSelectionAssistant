@@ -6,6 +6,8 @@ import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArra
 import { getConfig, saveConfig } from '@/api/config'
 import { loginTreehole, searchTreehole } from '@/api/crawler'
 import { generateTableData } from '@/api/timetable'
+import { savePreference } from '@/utils/configService'
+
 // 配置信息
 const formData = reactive({
   studentId: '',
@@ -483,52 +485,6 @@ const handleFileImport = async () => {
   }
 }
 
-// 保存选课倾向
-const savePreference = async () => {
-  try {
-    const config = {
-      model: {
-        base_url: formData.apiProvider,
-        model_name: formData.modelName,
-        api_key: formData.apiKey,
-        temperature: formData.temperature,
-        top_p: formData.topP,
-        stream: formData.stream
-      },
-      user: {
-        student_id: formData.studentId,
-        portal_password: formData.password,
-        grade: formData.grade,
-        semester: formData.semester,
-        introduction: formData.userDescription
-      },
-      course: {
-        course_list: courses.value.map(course => ({
-          name: course.name,
-          class_ids: course.classes.map(c => parseInt(c.id))
-        })),
-        min_credit: minCredits.value,
-        max_credit: maxCredits.value,
-        preference: coursePreference.value,
-        num_timetable: formData.num_timetable
-      },
-      crawler: {
-        chrome_user_data_dir: formData.chrome_user_data_dir,
-        num_search: formData.num_search,
-        sleep_after_search: formData.sleep_after_search,
-        sleep_between_scroll: formData.sleep_between_scroll,
-        sleep_random_range: formData.sleep_random_range
-      }
-    }
-    
-    await saveConfig(config)
-    ElMessage.success('保存成功')
-  } catch (error) {
-    console.error('保存配置失败:', error)
-    ElMessage.error('保存失败')
-  }
-}
-
 // 处理设定学期
 const handleSetSemester = async () => {
 
@@ -624,8 +580,6 @@ const deleteAllCourses = () => {
 }
 
 onMounted(async () => {
-  // const plan_pdf = await readPlanPDF()
-  // console.log(plan_pdf)
   await loadConfig()
 })
 </script>
@@ -789,7 +743,7 @@ onMounted(async () => {
         <el-collapse-item v-for="(course, courseIndex) in courses" :key="courseIndex" :name="courseIndex">
           <template #title>
             <div class="collapse-title">
-              <span>{{ course.name }}</span>
+              <span class="course-list-name">{{ course.name }}</span>
               <div class="button-group">
                 <el-button type="primary" size="small" @click.stop="addClass(courseIndex)">
                   添加班级
@@ -862,7 +816,7 @@ onMounted(async () => {
     </el-card>
 
     <div class="button-container">
-      <el-button type="success" size="large" @click="savePreference">保存</el-button>
+      <el-button type="success" size="large" @click="() => savePreference(formData, courses, minCredits, maxCredits, coursePreference)">保存</el-button>
       <el-button type="primary" size="large" @click="handleCourseEvaluation">开始搜索推荐</el-button>
     </div>
 
@@ -1001,7 +955,7 @@ onMounted(async () => {
         border
         style="width: 100%"
         :span-method="({ row, column, rowIndex, columnIndex }) => {
-          if (columnIndex === 0) {
+          if (columnIndex === 0) { // the first column (节次)
             return { rowspan: 1, colspan: 1 }
           }
           const cell = row[column.property]
@@ -1025,7 +979,7 @@ onMounted(async () => {
           label="周一"
         >
           <template #default="scope">
-            <div v-if="scope.row['周一']" class="course-cell">
+            <div v-if="scope.row['周一']" class="course-cell" :style="scope.row['周一'].bgColor ? { backgroundColor: scope.row['周一'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周一'].name }}</div>
               <div class="course-teacher">{{ scope.row['周一'].teacher }}</div>
               <div class="course-location">{{ scope.row['周一'].location }}</div>
@@ -1037,7 +991,7 @@ onMounted(async () => {
           label="周二"
         >
           <template #default="scope">
-            <div v-if="scope.row['周二']" class="course-cell">
+            <div v-if="scope.row['周二']" class="course-cell" :style="scope.row['周二'].bgColor ? { backgroundColor: scope.row['周二'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周二'].name }}</div>
               <div class="course-teacher">{{ scope.row['周二'].teacher }}</div>
               <div class="course-location">{{ scope.row['周二'].location }}</div>
@@ -1049,7 +1003,7 @@ onMounted(async () => {
           label="周三"
         >
           <template #default="scope">
-            <div v-if="scope.row['周三']" class="course-cell">
+            <div v-if="scope.row['周三']" class="course-cell" :style="scope.row['周三'].bgColor ? { backgroundColor: scope.row['周三'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周三'].name }}</div>
               <div class="course-teacher">{{ scope.row['周三'].teacher }}</div>
               <div class="course-location">{{ scope.row['周三'].location }}</div>
@@ -1061,7 +1015,7 @@ onMounted(async () => {
           label="周四"
         >
           <template #default="scope">
-            <div v-if="scope.row['周四']" class="course-cell">
+            <div v-if="scope.row['周四']" class="course-cell" :style="scope.row['周四'].bgColor ? { backgroundColor: scope.row['周四'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周四'].name }}</div>
               <div class="course-teacher">{{ scope.row['周四'].teacher }}</div>
               <div class="course-location">{{ scope.row['周四'].location }}</div>
@@ -1073,7 +1027,7 @@ onMounted(async () => {
           label="周五"
         >
           <template #default="scope">
-            <div v-if="scope.row['周五']" class="course-cell">
+            <div v-if="scope.row['周五']" class="course-cell" :style="scope.row['周五'].bgColor ? { backgroundColor: scope.row['周五'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周五'].name }}</div>
               <div class="course-teacher">{{ scope.row['周五'].teacher }}</div>
               <div class="course-location">{{ scope.row['周五'].location }}</div>
@@ -1085,7 +1039,7 @@ onMounted(async () => {
           label="周六"
         >
           <template #default="scope">
-            <div v-if="scope.row['周六']" class="course-cell">
+            <div v-if="scope.row['周六']" class="course-cell" :style="scope.row['周六'].bgColor ? { backgroundColor: scope.row['周六'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周六'].name }}</div>
               <div class="course-teacher">{{ scope.row['周六'].teacher }}</div>
               <div class="course-location">{{ scope.row['周六'].location }}</div>
@@ -1097,7 +1051,7 @@ onMounted(async () => {
           label="周日"
         >
           <template #default="scope">
-            <div v-if="scope.row['周日']" class="course-cell">
+            <div v-if="scope.row['周日']" class="course-cell" :style="scope.row['周日'].bgColor ? { backgroundColor: scope.row['周日'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周日'].name }}</div>
               <div class="course-teacher">{{ scope.row['周日'].teacher }}</div>
               <div class="course-location">{{ scope.row['周日'].location }}</div>
@@ -1109,278 +1063,8 @@ onMounted(async () => {
   </div>
 </template>
 
-<style>
-body {
-  margin: 0;
-  padding: 0;
-  background-color: #f5f7fa;
-  min-height: 100vh;
-}
-
-#app {
-  width: 100%;
-  min-height: 100vh;
-  background-color: #f5f7fa;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-</style>
-
-<style scoped>
-.app-container {
-  width: 90%;
-  max-width: 1200px;
-  min-width: 800px;
-  margin: 20px auto;
-  padding: 20px;
-  min-height: calc(100vh - 40px);
-  display: flex;
-  flex-direction: column;
-}
-
-.config-card,
-.course-card,
-.preference-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-  flex: 1;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.button-container {
-  display: flex;
-  justify-content: center;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-:deep(.el-card__header) {
-  padding: 15px 20px;
-  border-bottom: 1px solid #ebeef5;
-}
-
-:deep(.el-card__body) {
-  padding: 20px;
-}
-
-:deep(.el-table) {
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-:deep(.el-table th) {
-  background-color: #f5f7fa;
-  color: #606266;
-  font-weight: 600;
-}
-
-:deep(.el-table td) {
-  padding: 12px 0;
-}
-
-:deep(.el-button--primary) {
-  background-color: #409eff;
-  border-color: #409eff;
-}
-
-:deep(.el-button--primary:hover) {
-  background-color: #66b1ff;
-  border-color: #66b1ff;
-}
-
-:deep(.el-button--danger) {
-  background-color: #f56c6c;
-  border-color: #f56c6c;
-}
-
-:deep(.el-button--danger:hover) {
-  background-color: #f78989;
-  border-color: #f78989;
-}
-
-:deep(.el-input__inner) {
-  border-radius: 4px;
-}
-
-:deep(.el-textarea__inner) {
-  border-radius: 4px;
-  min-height: 100px !important;
-}
-
-.button-group {
-  display: flex;
-  gap: 10px;
-}
-
-.course-collapse {
-  margin-top: 20px;
-}
-
-:deep(.el-collapse-item__header) {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-:deep(.el-collapse-item__content) {
-  padding: 20px;
-}
-
-.collapse-title {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-  padding-right: 20px;
-}
-
-.collapse-title .button-group {
-  display: flex;
-  gap: 10px;
-}
-
-:deep(.el-collapse-item__header) {
-  font-size: 16px;
-  font-weight: 600;
-  padding-right: 20px;
-}
-
-.preference-card {
-  margin-bottom: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
-}
-
-.preference-content {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.credits-input {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 10px;
-}
-
-.credits-input :deep(.el-form-item) {
-  margin-bottom: 0;
-}
-
-.credits-input :deep(.el-input-number) {
-  width: 120px;
-}
-
-:deep(.el-slider) {
-  margin-top: 8px;
-}
-
-:deep(.el-slider__runway) {
-  margin: 16px 0;
-}
-
-.evaluation-card {
-  margin-top: 20px;
-}
-
-.evaluation-content {
-  padding: 20px;
-}
-
-.status-badge {
-  display: inline-block;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 14px;
-  margin-bottom: 16px;
-}
-
-.status-badge.队列中 {
-  background-color: #909399;
-  color: white;
-}
-
-.status-badge.搜索中 {
-  background-color: #409eff;
-  color: white;
-}
-
-.status-badge.评价中 {
-  background-color: #e6a23c;
-  color: white;
-}
-
-.status-badge.已完成 {
-  background-color: #67c23a;
-  color: white;
-}
-
-.evaluation-text {
-  white-space: pre-wrap;
-  line-height: 1.6;
-  color: #303133;
-}
-
-:deep(.el-tabs__item) {
-  font-size: 14px;
-  padding: 0 20px;
-}
-
-:deep(.el-tabs__nav) {
-  border: none;
-}
-
-:deep(.el-tabs__item.is-active) {
-  color: #409eff;
-  border-bottom: 2px solid #409eff;
-}
-
-.unit-label {
-  margin-left: 8px;
-  color: #606266;
-}
-
-.timetable-card {
-  margin-top: 20px;
-}
-
-.timetable-tabs {
-  margin-left: 20px;
-}
-
-.course-cell {
-  padding: 8px;
-  text-align: center;
-}
-
-.course-name {
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.course-teacher {
-  color: #666;
-  font-size: 0.9em;
-  margin-bottom: 2px;
-}
-
-.course-location {
-  color: #999;
-  font-size: 0.8em;
-}
-</style>
+<!-- 引入全局样式文件 -->
+<style src="@/styles/course.css"></style>
+<style src="@/styles/app.css"></style>
+<style src="@/styles/element-plus-overrides.css"></style>
+<style src="@/styles/evaluation.css"></style>

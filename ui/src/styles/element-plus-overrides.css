@@ -1,0 +1,86 @@
+/*
+  Element Plus 组件深度样式，包含表格、输入框、滑块、Tabs等
+*/
+
+:deep(.el-card__header) {
+  padding: 15px 20px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+:deep(.el-card__body) {
+  padding: 20px;
+}
+
+:deep(.el-table) {
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+:deep(.el-table th) {
+  background-color: #f5f7fa;
+  color: #606266;
+  font-weight: 600;
+}
+
+:deep(.el-table td) {
+  padding: 12px 0;
+}
+
+:deep(.el-button--primary) {
+  background-color: #409eff;
+  border-color: #409eff;
+}
+
+:deep(.el-button--primary:hover) {
+  background-color: #66b1ff;
+  border-color: #66b1ff;
+}
+
+:deep(.el-button--danger) {
+  background-color: #f56c6c;
+  border-color: #f56c6c;
+}
+
+:deep(.el-button--danger:hover) {
+  background-color: #f78989;
+  border-color: #f78989;
+}
+
+:deep(.el-input__inner) {
+  border-radius: 4px;
+}
+
+:deep(.el-textarea__inner) {
+  border-radius: 4px;
+  min-height: 100px !important;
+}
+
+.credits-input :deep(.el-form-item) {
+  margin-bottom: 0;
+}
+
+.credits-input :deep(.el-input-number) {
+  width: 120px;
+}
+
+:deep(.el-slider) {
+  margin-top: 8px;
+}
+
+:deep(.el-slider__runway) {
+  margin: 16px 0;
+}
+
+:deep(.el-tabs__item) {
+  font-size: 14px;
+  padding: 0 20px;
+}
+
+:deep(.el-tabs__nav) {
+  border: none;
+}
+
+:deep(.el-tabs__item.is-active) {
+  color: #409eff;
+  border-bottom: 2px solid #409eff;
+}

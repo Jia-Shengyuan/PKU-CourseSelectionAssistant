@@ -204,7 +204,7 @@ async def gen_plan(gen_plan_request: GenPlanRequest):
     生成选课方案，返回一个List[List[Course]]，表示所有选课方案。
     其中每个List[Course]表示一组选课方案。
     """
-    return [[Course(name="数学分析", class_id=1, course_id="3", teacher="lwg"),
-             Course(name="高等代数", class_id=1, course_id="2", teacher="wfz")],
-             
-            [Course(name="恨基础", class_id=2, course_id="2", teacher="dh")]]
+    return [[Course(name="数学分析", class_id=1, course_id="3", teacher="lwg", location="理教206", time="all,1,3-4;all,3,1-2;"),
+             Course(name="高等代数", class_id=1, course_id="2", teacher="wfz", location="二教103", time="all,2,3-4;all,5,1-2;"),
+             Course(name="史纲", class_id=1, course_id="1", teacher="whatever", location="理教201", time="all,3,7-8;"),
+             Course(name="恨基础", class_id=2, course_id="2", teacher="dh", location="理教403", time="all,1,5-6;odd,4,7-8;")]]
