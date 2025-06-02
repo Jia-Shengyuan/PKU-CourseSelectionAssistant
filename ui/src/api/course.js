@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { BASE_URL } from '@/config'
+import { BASE_URL } from '@/utils'
 
 /**
  * 获取所有满足筛选条件的课程信息
@@ -110,7 +110,7 @@ export const activateDatabase = async (semester) => {
 }
 
 // 获取课程评价
-export const getCourseEvaluation = async (courseName, rawText, onChunk) => {
+export const getCourseEvaluation = async (courseName, rawText, choices, onChunk) => {
   try {
     const response = await fetch(`${BASE_URL}/llm/evaluate_test`, {
       method: 'POST',
@@ -119,7 +119,8 @@ export const getCourseEvaluation = async (courseName, rawText, onChunk) => {
       },
       body: JSON.stringify({
         course_name: courseName,
-        raw_text: rawText
+        raw_text: rawText,
+        choices: choices // 新增
       })
     });
 

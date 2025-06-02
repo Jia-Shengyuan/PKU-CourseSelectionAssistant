@@ -14,16 +14,17 @@ system_template = Template(
 '''
 你是一个帮助大学生选课的应用中的AI助手。请根据用户提供的培养方案，课程列表，列表中课程及老师的评价，自身特点和需求，以及用户所在的年级，生成一个合理的选课计划。
 请注意以下几点：
-1. 如果用户有特定要求，请优先满足这些要求。如果用户特别说明的需求与后面几条矛盾，请以用户的需求为准。
+1. 如果用户有特定要求，请优先满足这些要求。如果用户特别说明的需求与后面几条矛盾，请以用户的需求为准。你需要注意用户的口吻（如是否使用了“必须”、“一定”等词语），来判断用户的需求是否是硬性要求。
 2. 选课时，你需要确保培养方案中本学期的必修课都被选上（硬性要求，除非这些课程用户已经学过）。
 3. 选课时，你只能选择用户提供的课程列表中的课程（硬性要求）。
-4. 课程时间不能重叠（硬性要求）。
+4. 课程时间不能相互冲突（硬性要求）。注意，若一个课程的时间中包含多个时段，则说明这些时段都要上课（而非在其中选一个时间上），因此要保证这些时段都是不与其他课程冲突的。
 5. 选择非必修课时，需要综合考虑培养方案中的学分要求，用户自身特点及未来发展，课程及教师风评，上课时间等因素。
 6. 课程的学分总和需要在用户提供的学分范围内（硬性要求）。你选课的总学分，应当以用户提供的最大、最小学分的平均值为基准浮动。
-7. 如果某一课程有平替，则尽量避免选早八课（即上课时间为1-2节的课程），这一条优先级相对较低。
+7. 为早八课（即上课时间为1-2节的课程）安排相对较低的选择权重；尽量避免在某一天安排过多的课。这一条优先级相对较低。
 8. 除第2条提到的本学期必修课一定要选外，你不一定需要严格按照培养方案中推荐的选课学期来选课，但需要确保这适合用户。即，如果你发现一个推荐在别的学期上的课，对这个学期的用户而言很合适，那么你可以也考虑去选。
+9. 注意用户是大学生的身份，其语言中可能包含大学生的习惯性用语（如"早八"通常代指每天的第1-2节课，需要你去理解）。
 
-用户可能需要不止一份选课计划。根据用户需要的数量，你的回复需要以json格式返回相应个数个选课计划。这些选课计划之间应该存在一些差别，来让用户选择采用哪个，并且你应该把你最推荐的选课计划放在最前面。每个选课计划都需要满足以上所有要求。
+用户可能需要不止一份选课计划。根据用户需要的数量，你的回复需要以json格式返回相应个数个选课计划。这些选课计划之间应该存在一些差别（例如不同的学分数，不同的课程选择等），来让用户选择采用哪个，并且你应该把你最推荐的选课计划放在最前面。每个选课计划都需要满足以上所有要求。
 你可以理解成你需要以json格式回复一个List[List[Course]]，其中每个List[Course]表示一组选课方案，一个Course表示具体选的一门课。
 具体而言，Course包含如下的信息：
     name: str
@@ -35,9 +36,9 @@ system_template = Template(
     teacher: Optional[str] = None
     location: Optional[str] = None
 
-用户提供的课程列表中，课程就会以这样的格式给出。当你想要选某门课时，你需要确保输出中除time外的其他信息都没有任何改动，而time则需要你进行如下的格式化，以方便代码对其解析：
+在用户提供的课程列表中，课程就会以Course的格式给出。当你想要选某门课时，你需要确保输出中除time外的其他信息都没有任何改动，而time则需要你进行如下的格式化，以方便代码对其解析：
 我们用例子来说明："周一3-4节，周三1-2节" -> "all,1,3-4;all,3,1-2;"，"周二第1节" -> "all,2,1-1;"，"每周周一5-6节，单周周四7-8节" -> "all,1,5-6;odd,4,7-8;"，"双周周四10-11节" -> "even,4,10-11;"。
-即，对于每门课的若干个时段，你需要将时间段之间用分号分隔，时间段的格式是"all/odd/even,星期,开始节-结束节"，其中星期从1到7分别表示周一到周日。
+即，对于每门课的若干个时段，你需要将时间段之间用分号分隔，时间段的格式是"all/odd/even,星期,开始节-结束节"，其中星期从1到7分别表示周一到周日。某些课程的时间中可能包含周数（如"1-16周"或"1-9周"），但在格式化时请忽略这一信息，只按前面的要求来。
 注意，由于你的输出会被程序解析，因此请确保其符合上述格式，且没有任何其他内容。
 
 用户对自己的介绍是：${user_description}
@@ -50,16 +51,6 @@ system_template = Template(
 下面是课程列表，每门课包含课程名称、课程评价和具体开设的班级：${courses}
 '''
 )
-
-#每个功能拆成函数
-
-# def single_course_info(evaluated_course : list[Course]) -> str:
-#    info = f'''
-# 学分 = {evaluated_course.choices[0].credit}
-# 课程可选的老师有
-# {' '.join(each_course.teacher + "课程id是:" + each_course.course_id + '\n课程时间是' + each_course.time for each_course in evaluated_course.choices)}
-# '''
-    # return info
 
 def is_valid_time_format(time_str: str) -> bool:
     """
@@ -84,6 +75,28 @@ def remove_code_block(response: str) -> str:
     elif response.startswith('```'):
         return response.lstrip('```').rstrip('```').strip()
     return response.strip()
+
+def parse_time_segments(time_str: str):
+    """
+    解析时间字符串，返回所有时段的 (week_type, weekday, start, end) 元组列表。
+    """
+    # if not is_valid_time_format(time_str):
+        # return []
+    segments = []
+    for seg in time_str.strip().split(';'):
+        if not seg:
+            continue
+        parts = seg.split(',')
+        if len(parts) != 3:
+            continue
+        week_type, weekday, section = parts
+        try:
+            weekday = int(weekday)
+            start, end = map(int, section.split('-'))
+            segments.append((week_type, weekday, start, end))
+        except Exception:
+            continue
+    return segments
 
 def format_checker(response: str) -> List[str]:
     """
@@ -120,12 +133,32 @@ def format_checker(response: str) -> List[str]:
                     errors.append(f"{course} 不是一个字典类型。")
         return errors
     
-    for plan in response:
+    for plan_idx, plan in enumerate(response):
+        time_table = {}  # (week_type, weekday, section) -> (course_name, class_id)
         for course in plan:
+
             try:
                 c = Course(**course)
                 if not is_valid_time_format(c.time):
                     errors.append(f"{c} 的时间格式不正确。")
+                    continue
+
+                segments = parse_time_segments(c.time)
+                for week_type, weekday, start, end in segments:
+
+                    if not (1 <= weekday <= 7):
+                        errors.append(f"{c.name} 的上课星期 {weekday} 不在1~7范围内。")
+                    if not (1 <= start <= 12) or not (1 <= end <= 12) or start > end:
+                        errors.append(f"{c.name} 的上课节次 {start}-{end} 不在1~12范围内，或起止顺序错误。")
+
+                    for section in range(start, end + 1):
+                        key = (week_type, weekday, section)
+                        if key in time_table:
+                            prev_name, prev_class = time_table[key]
+                            errors.append(f"选课计划{plan_idx+1}中 {c.name}(班号{c.class_id}) 与 {prev_name}(班号{prev_class}) 在 {week_type}, 星期{weekday}, 第{section}节时间冲突。请调整其中的至少一门课程。")
+                        else:
+                            time_table[key] = (c.name, c.class_id)
+
             except Exception as e:
                 errors.append(f"你的回复中有课程信息不符合Course模型的要求: {e}")
 
@@ -144,7 +177,6 @@ async def generate_single_plan(data : GenPlanRequest, display : bool = False) ->
     courses = json.dumps([c.model_dump() for c in data.all_classes], ensure_ascii=False)
 
     logger.log_info("准备生成选课计划...")
-    # logger.log_info("所有课程如下：" + courses)
 
     messages = [
         {"role": "system", "content": system_template.substitute(
@@ -156,7 +188,7 @@ async def generate_single_plan(data : GenPlanRequest, display : bool = False) ->
             num_plans = data.num_plans,
             courses = courses
         )},
-        {"role": "user", "content": '请严格遵循上述要求，为我生成符合要求的选课计划。再次强调，回复的格式需要符合JSON格式，每个选课计划中的每门课只能出自给定的课程列表，并且时间格式需要符合要求，除时间外的一切信息不能有任何改动。'}
+        {"role": "user", "content": '请严格遵循上述要求，为我生成符合要求的选课计划。'}
     ]
 
     response = llm.chat(messages, error_checker=format_checker, max_retries=3)

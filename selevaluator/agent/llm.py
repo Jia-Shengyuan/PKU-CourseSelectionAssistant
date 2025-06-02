@@ -155,8 +155,6 @@ class AgentLLM(AsyncLLM):
 
                 error_prompt = "请注意，你刚才的回复中，存在错误（不符合约定格式）的信息。请根据以下错误提示重新回答问题：\n" + "\n".join(errors) + "\n注意：你的新的回答需要符合约定格式，且不包含任何错误，不包含除json回复外的任何信息，确保你的回复能被json.loads()直接解析。"
                     
-                
-
                 messages.append({
                     "role": "assistant",
                     "content": response_text

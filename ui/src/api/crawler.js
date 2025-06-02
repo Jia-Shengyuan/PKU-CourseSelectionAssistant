@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { BASE_URL } from '@/config'
+import { BASE_URL } from '@/utils'
 
 // 登录树洞
 export const loginTreehole = async () => {
@@ -12,11 +12,11 @@ export const loginTreehole = async () => {
 }
 
 // 搜索课程评价
-export const searchTreehole = async (courseName) => {
+export const searchTreehole = async (courseName, num_search = 3) => {
     try {
       const response = await axios.post(`${BASE_URL}/crawler/search_courses`, {
         course_name: courseName,
-        max_len: 3  // 可以根据需要调整
+        max_len: num_search  // 可以根据需要调整
       });
       return response.data;
     } catch (error) {

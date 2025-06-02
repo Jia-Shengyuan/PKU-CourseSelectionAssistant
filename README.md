@@ -3,11 +3,11 @@
 ## 环境配置
 
 ### Python环境配置
-1. 安装 Python (推荐 3.9 或更高版本)
+1. 安装 Python (开发环境为 3.12.7 版本)
    - 访问 [Python官网](https://www.python.org/) 下载并安装
-   - 确保Python已添加到系统环境变量
+   - 确保安装时将 Python 添加到系统环境变量
 
-2. 安装依赖包
+2. 安装依赖包：先在终端中进入本项目根目录，之后输入
    ```bash
    pip install -r requirements.txt
    ```
@@ -16,13 +16,14 @@
 1. 安装 Node.js
    - 访问 [Node.js 官网](https://nodejs.org/) 下载并安装
    - 建议安装 LTS（长期支持）版本
+   - 确保安装时将Node.js添加到系统环境变量
 
 2. 安装 pnpm
    ```bash
    npm install -g pnpm
    ```
 
-3. 安装前端依赖
+3. 安装前端依赖（同样是先在终端中进入本项目根目录，之后再输入下方指令）
    ```bash
    cd ui
    pnpm install
@@ -32,7 +33,7 @@
 
 项目的运行需要同时启用前后端
 
-启动后端：
+启动后端：使用终端进入根目录后
 ```bash
 uvicorn api.main:app --reload
 ```
@@ -43,7 +44,17 @@ cd ui
 pnpm run dev
 ```
 
-之后按照输出打开前端对应网页即可。
+之后按照这个终端输出打开前端对应网页即可，默认情况下一般为 [http://localhost:5173/](http://localhost:5173/)。
+
+打开前端网页后，根据前端配置选课信息，即可开始自动爬取评价并选课。其中唯一不能在前端完成的一步是配置你的培养方案，你需要将其命名为 `plan.pdf` 并放在项目根目录下的 `config` 文件夹中。
+
+## 获取大模型 API Key
+
+由于本项目需要通过大模型选课，你需要提供能够与大模型进行交互的 API Key 才能运行。
+
+下面的教程基于[硅基流动](https://siliconflow.cn/)平台，其他平台获取 API Key 的教程可以去网上搜索。
+
+硅基流动你也自己搜吧。
 
 ------
 

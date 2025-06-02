@@ -9,6 +9,7 @@ class TreeholeSearchRequest(BaseModel):
 class EvaluateRequest(BaseModel):
     course_name: str
     raw_text: str
+    choices: List[str]
 
 # 这些 class 都是暂定的，可以按照你的需求进行修改，在群里说一声即可
 class EvaluatedCourse(BaseModel):

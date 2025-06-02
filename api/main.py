@@ -26,7 +26,7 @@ app = FastAPI()
 # 配置CORS中间件
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],  # 允许所有方法
     allow_headers=["*"],  # 允许所有头部
@@ -205,8 +205,6 @@ async def gen_plan(gen_plan_request: GenPlanRequest) -> List[List[Course]]:
     生成选课方案，返回一个List[List[Course]]，表示所有选课方案。
     其中每个List[Course]表示一组选课方案。
     """
-    logger = Logger()
-    logger.log_info("收到请求 {gen_plan_request}")
     return await generate_single_plan(gen_plan_request, display=False)
     
     return [[Course(name="数学分析", class_id=1, course_id="3", teacher="lwg", location="理教206", time="all,1,3-4;all,3,1-2;"),

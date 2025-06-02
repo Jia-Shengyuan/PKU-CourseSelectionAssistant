@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
 import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan } from '@/api/course'
@@ -42,7 +42,9 @@ const addCourseDialogVisible = ref(false)
 const newCourse = reactive({
   name: '',
   teacher: '',
-  class_id: ''
+  class_id: '',
+  fuzzy_matching: true,
+  accept_advanced_class: false
 })
 
 // 编辑课程对话框
@@ -71,6 +73,10 @@ const newClass = reactive({
   class_id: '',
   teacher: ''
 })
+
+const isLoadingConfig = ref(false)
+const isGeneratingTimetable = ref(false)
+const timetableTotalCredits = ref(0)
 
 // 计算当前正在添加班级的课程名称
 const addingCourseName = computed(() => {
@@ -118,11 +124,11 @@ const showEditCourseDialog = (courseIndex, classIndex) => {
 
 // 添加课程（如"数学分析"）
 const addCourse = async () => {
+
   if (!isDatabaseActivated.value) {
     ElMessage.warning('请先设置学期，并激活数据库')
     return
   }
-
   if (!newCourse.name) {
     ElMessage.warning('请输入课程名称')
     return
@@ -135,11 +141,13 @@ const addCourse = async () => {
   }
 
   try {
-    // 从API获取课程信息
+    
     const courseData = await fetchCourse(
       newCourse.name,
       newCourse.class_id ? parseInt(newCourse.class_id) : null,
-      newCourse.teacher || null
+      newCourse.teacher || null,
+      newCourse.accept_advanced_class,
+      newCourse.fuzzy_matching
     )
     
     if (!courseData || courseData.length === 0) {
@@ -147,19 +155,34 @@ const addCourse = async () => {
       return
     }
 
-    // 将API返回的数据转换为前端需要的格式
-    const newCourseData = {
-      name: newCourse.name,
-      classes: courseData.map(course => ({
+    // 将课程数据转换为 Map 结构，处理不同的课程名称和多个班级的情况
+    const courseMap = new Map();
+    courseData.forEach(course => {
+      if (!courseMap.has(course.name)) {
+        courseMap.set(course.name, []);
+      }
+      courseMap.get(course.name).push({
         id: course.class_id.toString(),
         teacher: course.teacher,
         time: course.time,
         location: course.location
-      }))
+      });
+    });
+    // 将每个课程名都添加到 courses.value
+    for (const [name, classes] of courseMap.entries()) {
+      // 如果已存在该课程名，合并班级（避免重复）
+      const exist = courses.value.find(c => c.name === name);
+      if (exist) {
+        // 合并班级，避免重复
+        classes.forEach(cls => {
+          if (!exist.classes.some(c => c.id === cls.id && c.teacher === cls.teacher)) {
+            exist.classes.push(cls);
+          }
+        });
+      } else {
+        courses.value.push({ name, classes });
+      }
     }
-
-    // 添加到课程列表
-    courses.value.push(newCourseData)
     
     // 自动展开新添加的课程
     const newIndex = courses.value.length - 1
@@ -303,11 +326,33 @@ const EvaluationStatus = {
 const timetables = ref([]) // 存储所有课表
 const activeTimetableIndex = ref(0) // 当前显示的课表索引
 
+// 计算当前课表的总学分
+const updateTimetableTotalCredits = () => {
+  if (timetables.value.length > 0 && Array.isArray(timetables.value[activeTimetableIndex.value])) {
+    let total = 0
+    timetables.value[activeTimetableIndex.value].forEach(course => {
+      if (course.credit) {
+        total += Number(course.credit)
+      }
+    })
+    timetableTotalCredits.value = total
+  } else {
+    timetableTotalCredits.value = 0
+  }
+}
+
+// 监听课表切换，动态更新总学分
+watch(activeTimetableIndex, updateTimetableTotalCredits)
+watch(timetables, updateTimetableTotalCredits)
+
 const handleCourseEvaluation = async () => {
   if (courses.value.length === 0) {
     ElMessage.warning('请至少添加一门课程')
     return
   }
+
+  // 先保存当前配置和课程
+  await savePreference(formData, courses, minCredits, maxCredits, coursePreference)
 
   try {
     // 先登录树洞
@@ -337,7 +382,7 @@ const handleCourseEvaluation = async () => {
         courseEvaluationStatus.value[course.name] = EvaluationStatus.SEARCHING
         
         // 搜索树洞评价
-        const rawText = await searchTreehole(course.name)
+        const rawText = await searchTreehole(course.name, formData.num_search)
         
         // 更新状态为评价中
         courseEvaluationStatus.value[course.name] = EvaluationStatus.EVALUATING
@@ -366,6 +411,7 @@ const handleCourseEvaluation = async () => {
         await getCourseEvaluation(
           course.name,
           rawText,
+          courses.value.find(c => c.name === course.name)?.classes?.map(cls => cls.teacher) || [],
           (chunk) => {
             // 更新评价内容
             courseEvaluationContent.value[course.name] += chunk
@@ -403,6 +449,14 @@ const handleCourseEvaluation = async () => {
 
     // 开始处理队列
     processQueue()
+    // 自动移动到页面底部
+    setTimeout(() => {
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })
+    }, 100)
+    // 课表生成菜单预显示
+    isGeneratingTimetable.value = false
+    timetables.value = []
+    timetableTotalCredits.value = 0
   } catch (error) {
     console.error('登录树洞失败:', error)
     ElMessage.error('登录树洞失败，请检查网络连接')
@@ -412,6 +466,8 @@ const handleCourseEvaluation = async () => {
 // 生成课表
 const generateTimetables = async () => {
   try {
+    isGeneratingTimetable.value = true
+    timetableTotalCredits.value = 0
     // 准备课程评价数据
     const allClasses = courses.value.map(course => ({
       course_name: course.name,
@@ -445,11 +501,13 @@ const generateTimetables = async () => {
     const response = await genPlan(requestData)
     timetables.value = response
     activeTimetableIndex.value = 0
-
+    updateTimetableTotalCredits()
     ElMessage.success('课表生成成功')
   } catch (error) {
     console.error('生成课表失败:', error)
     ElMessage.error('生成课表失败')
+  } finally {
+    isGeneratingTimetable.value = false
   }
 }
 
@@ -514,7 +572,10 @@ const handleSetSemester = async () => {
 const loadConfig = async () => {
 
   ElMessage.info('正在加载配置...')
+  isLoadingConfig.value = true
+
   try {
+
     const config = await getConfig()
     
     // 更新表单数据
@@ -563,6 +624,8 @@ const loadConfig = async () => {
     console.error('加载配置失败:', error)
     ElMessage.error('加载配置失败')
   }
+  
+  isLoadingConfig.value = false
 }
 
 // 删除所有课程
@@ -586,6 +649,7 @@ const deleteAllCourses = () => {
 onMounted(async () => {
   await loadConfig()
 })
+
 </script>
 
 <template>
@@ -737,13 +801,14 @@ onMounted(async () => {
         <div class="card-header">
           <span>课程列表</span>
           <div class="button-group">
-            <el-button type="danger" @click="deleteAllCourses">删除所有课程</el-button>
-            <el-button type="success" @click="handleFileImport">导入培养方案</el-button>
-            <el-button type="primary" @click="showAddCourseDialog">手动添加课程</el-button>
+            <el-button type="danger" @click="deleteAllCourses" :disabled="isLoadingConfig">删除所有课程</el-button>
+            <el-button type="success" @click="handleFileImport" :disabled="isLoadingConfig">导入培养方案</el-button>
+            <el-button type="primary" @click="showAddCourseDialog" :disabled="isLoadingConfig">手动添加课程</el-button>
           </div>
         </div>
       </template>
-      <el-collapse v-model="activeNames" class="course-collapse">
+      <div v-if="isLoadingConfig" style="text-align:center;padding:20px;color:#999;">课程列表加载中...</div>
+      <el-collapse v-else v-model="activeNames" class="course-collapse">
         <el-collapse-item v-for="(course, courseIndex) in courses" :key="courseIndex" :name="courseIndex">
           <template #title>
             <div class="collapse-title">
@@ -870,6 +935,12 @@ onMounted(async () => {
             show-icon
           />
         </el-form-item>
+        <el-form-item label="模糊匹配">
+          <el-switch v-model="newCourse.fuzzy_matching"/>
+        </el-form-item>
+        <el-form-item label="接受实验班">
+          <el-switch v-model="newCourse.accept_advanced_class"/>
+        </el-form-item>
       </el-form>
       <template #footer>
         <span class="dialog-footer">
@@ -936,25 +1007,24 @@ onMounted(async () => {
     </el-dialog>
 
     <!-- 课表展示区域 -->
-    <el-card v-if="timetables.length > 0" class="timetable-card">
+    <el-card v-if="isGeneratingTimetable || timetables.length > 0" class="timetable-card">
       <template #header>
         <div class="card-header">
           <span>课表方案</span>
-          <div class="timetable-tabs">
-            <el-radio-group v-model="activeTimetableIndex">
-              <el-radio-button 
-                v-for="(_, index) in timetables" 
-                :key="index" 
-                :label="index"
-              >
-                方案 {{ index + 1 }}
-              </el-radio-button>
-            </el-radio-group>
+          <div class="timetable-tabs" style="display:flex;align-items:center;">
+            <span v-if="isGeneratingTimetable" style="color:#999;margin-left:16px;">生成中...</span>
+            <template v-else-if="timetables.length > 0">
+              <span style="color:#222;font-size:16px;margin-left:16px;">总学分：{{ timetableTotalCredits }}</span>
+              <el-radio-group v-model="activeTimetableIndex" size="large" style="margin-left:48px;align-self:center;">
+                <el-radio-button v-for="(tb, idx) in timetables" :key="idx" :label="idx" style="font-size:18px;">方案{{ idx + 1 }}</el-radio-button>
+              </el-radio-group>
+            </template>
           </div>
         </div>
       </template>
-      
+      <div v-if="isGeneratingTimetable" style="text-align:center;padding:32px 0;color:#999;font-size:18px;">课表生成中，请稍候...</div>
       <el-table
+        v-else
         :data="generateTableData(timetables[activeTimetableIndex])"
         border
         style="width: 100%"

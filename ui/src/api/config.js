@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { BASE_URL } from '@/config'
+import { BASE_URL } from '@/utils'
 
 /**
  * 获取配置文件内容
