@@ -14,7 +14,7 @@
 .course-name {
   font-weight: bold;
   margin-bottom: 4px;
-  font-size: 1em; /* 略微放大课程名称字体 */
+  font-size: 1em;
 }
 
 .course-teacher {

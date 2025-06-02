@@ -31,7 +31,7 @@ class RawComment:
 ''' 
 " 评价:" + comment
 }] 
-        self.messages.append({"role": "system", "content": "你需要总结课程的评价"})
+        self.messages.append({"role": "user", "content": "你需要总结课程的评价"})
     def get_query(self):
         return self.messages
 

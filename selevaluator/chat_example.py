@@ -1,5 +1,5 @@
 import asyncio
-from agent.llm import LLM, LLM_Settings, AsyncLLM
+from agent.llm import LLM, LLM_Settings, AsyncLLM, AgentLLM
 from agent.logger.logger import Logger
 from typing import List
 from rich.markdown import Markdown
@@ -43,7 +43,7 @@ async def async_chat(queries : List[str], display_while_running : bool = False):
 
     logger = Logger()
     settings = LLM_Settings()
-    llm = AsyncLLM(settings, logger)
+    llm = AgentLLM(settings, logger)
 
     results = []
 

@@ -1,54 +1,182 @@
 from api.models.course import Course, CourseSearchRequest, FetchCourseByPlanRequest
 from api.models.chat import GenPlanRequest, EvaluatedCourse
 import asyncio
-from selevaluator.agent.llm import LLM, LLM_Settings, AsyncLLM
+from selevaluator.agent.llm import LLM, LLM_Settings, AsyncLLM, AgentLLM
 from selevaluator.agent.logger.logger import Logger
 from typing import List
 from rich.markdown import Markdown
 from pathlib import Path
+from string import Template
+import json
+import re
+
+system_template = Template(
 '''
-class GenPlanRequest(BaseModel):
-    all_classes: List[EvaluatedCourse] # 每门课为一项
-    user_description: str
-    plan: str # 培养方案
-    class_choosing_preference: str
-    min_credits: int
-    max_credits: int
-    num_plans: int = 1 # 生成多少个选课计划
-class EvaluatedCourse(BaseModel):
-    course_name: str
-    summary: str # LLM对课程的总结
-    choices: List[Course] # 待选课程列表
-class Course(BaseModel):
+你是一个帮助大学生选课的应用中的AI助手。请根据用户提供的培养方案，课程列表，列表中课程及老师的评价，自身特点和需求，以及用户所在的年级，生成一个合理的选课计划。
+请注意以下几点：
+1. 如果用户有特定要求，请优先满足这些要求。如果用户特别说明的需求与后面几条矛盾，请以用户的需求为准。
+2. 选课时，你需要确保培养方案中本学期的必修课都被选上（硬性要求，除非这些课程用户已经学过）。
+3. 选课时，你只能选择用户提供的课程列表中的课程（硬性要求）。
+4. 课程时间不能重叠（硬性要求）。
+5. 选择非必修课时，需要综合考虑培养方案中的学分要求，用户自身特点及未来发展，课程及教师风评，上课时间等因素。
+6. 课程的学分总和需要在用户提供的学分范围内（硬性要求）。你选课的总学分，应当以用户提供的最大、最小学分的平均值为基准浮动。
+7. 如果某一课程有平替，则尽量避免选早八课（即上课时间为1-2节的课程），这一条优先级相对较低。
+8. 除第2条提到的本学期必修课一定要选外，你不一定需要严格按照培养方案中推荐的选课学期来选课，但需要确保这适合用户。即，如果你发现一个推荐在别的学期上的课，对这个学期的用户而言很合适，那么你可以也考虑去选。
+
+用户可能需要不止一份选课计划。根据用户需要的数量，你的回复需要以json格式返回相应个数个选课计划。这些选课计划之间应该存在一些差别，来让用户选择采用哪个，并且你应该把你最推荐的选课计划放在最前面。每个选课计划都需要满足以上所有要求。
+你可以理解成你需要以json格式回复一个List[List[Course]]，其中每个List[Course]表示一组选课方案，一个Course表示具体选的一门课。
+具体而言，Course包含如下的信息：
     name: str
-    class_id: int # ??? who changed it to float?
+    class_id: int
     course_id: str
     note: Optional[str] = None
     time: Optional[str] = None
     credit: Optional[float] = 0
     teacher: Optional[str] = None
     location: Optional[str] = None
+
+用户提供的课程列表中，课程就会以这样的格式给出。当你想要选某门课时，你需要确保输出中除time外的其他信息都没有任何改动，而time则需要你进行如下的格式化，以方便代码对其解析：
+我们用例子来说明："周一3-4节，周三1-2节" -> "all,1,3-4;all,3,1-2;"，"周二第1节" -> "all,2,1-1;"，"每周周一5-6节，单周周四7-8节" -> "all,1,5-6;odd,4,7-8;"，"双周周四10-11节" -> "even,4,10-11;"。
+即，对于每门课的若干个时段，你需要将时间段之间用分号分隔，时间段的格式是"all/odd/even,星期,开始节-结束节"，其中星期从1到7分别表示周一到周日。
+注意，由于你的输出会被程序解析，因此请确保其符合上述格式，且没有任何其他内容。
+
+用户对自己的介绍是：${user_description}
+用户对选课的额外偏好是：${class_choosing_preference}
+用户希望的学分范围是${min_credits}到${max_credits}学分。
+用户希望你生成${num_plans}个选课计划。
+
+下面是用户的培养方案：${plan}
+
+下面是课程列表，每门课包含课程名称、课程评价和具体开设的班级：${courses}
 '''
+)
+
 #每个功能拆成函数
-def single_course_info(evaluated_course : list[Course]) -> str:
-    info = f'''
-学分 = {evaluated_course.choices[0].credit}
-课程可选的老师有
-{' '.join(each_course.teacher + "课程id是:" + each_course.course_id + '\n课程时间是' + each_course.time for each_course in evaluated_course.choices)}
-'''
-    return info
-async def generate_single_plan(data : GenPlanRequest, display : bool = False):
+
+# def single_course_info(evaluated_course : list[Course]) -> str:
+#    info = f'''
+# 学分 = {evaluated_course.choices[0].credit}
+# 课程可选的老师有
+# {' '.join(each_course.teacher + "课程id是:" + each_course.course_id + '\n课程时间是' + each_course.time for each_course in evaluated_course.choices)}
+# '''
+    # return info
+
+def is_valid_time_format(time_str: str) -> bool:
+    """
+    检查时间字符串是否符合格式：
+    "all/odd/even,星期,开始节-结束节;..."，多个时段用分号分隔，允许末尾有分号。
+    例：all,1,3-4;odd,4,7-8;
+    """
+    if not isinstance(time_str, str):
+        return False
+    if time_str.strip() == '':
+        return False
+
+    full_pattern = rf"^((all|odd|even),[1-7],\d{{1,2}}-\d{{1,2}};)+$"
+    return re.fullmatch(full_pattern, time_str.strip()) is not None
+
+def remove_code_block(response: str) -> str:
+    """
+    移除回复中的代码块标记。
+    """
+    if response.startswith('```json'):
+        return response.lstrip('```json').rstrip('```').strip()
+    elif response.startswith('```'):
+        return response.lstrip('```').rstrip('```').strip()
+    return response.strip()
+
+def format_checker(response: str) -> List[str]:
+    """
+    检查LLM的回复是否符合预期格式。
+    如果不符合，返回错误信息列表。
+    """
+    errors = []
+
+    response = remove_code_block(response)
+    
+    try:
+        response = json.loads(response)
+    except json.JSONDecodeError:
+        errors.append("你的回复无法被json.loads()直接解析，请确保输出符合JSON格式。")
+        return errors
+    
+    if not isinstance(response, list):
+        errors.append("你的回复应该是一个包含多个选课计划的列表，其类型应当为List[List[Course]]，但你返回的不是一个列表。")
+        return errors
+    
+    if not all(isinstance(plan, list) for plan in response):
+        errors.append("你给出的每一个选课计划都应该是一个列表，为List[Course]类型。但你返回的某些选课计划不是列表。")
+        for plan in response:
+            if not isinstance(plan, list):
+                errors.append(f"{plan} 不是一个列表。")
+
+        return errors
+
+    if not all(all(isinstance(course, dict) for course in plan) for plan in response):
+        errors.append("在json格式下，你给出的每一门课都应该是一个Course，对应字典类型。但你返回的某些课程不是字典类型。")
+        for plan in response:
+            for course in plan:
+                if not isinstance(course, dict):
+                    errors.append(f"{course} 不是一个字典类型。")
+        return errors
+    
+    for plan in response:
+        for course in plan:
+            try:
+                c = Course(**course)
+                if not is_valid_time_format(c.time):
+                    errors.append(f"{c} 的时间格式不正确。")
+            except Exception as e:
+                errors.append(f"你的回复中有课程信息不符合Course模型的要求: {e}")
+
+    if not errors:
+        return []
+
+    return errors
+
+async def generate_single_plan(data : GenPlanRequest, display : bool = False) -> List[List[Course]]:
+
+
     logger = Logger()
     settings = LLM_Settings()
-    llm = LLM(settings, logger)
-    ChosenCourses =[]
+    llm = AgentLLM(settings, logger)
+
+    courses = json.dumps([c.model_dump() for c in data.all_classes], ensure_ascii=False)
+
+    logger.log_info("准备生成选课计划...")
+    # logger.log_info("所有课程如下：" + courses)
+
+    messages = [
+        {"role": "system", "content": system_template.substitute(
+            plan = data.plan,
+            min_credits = data.min_credits,
+            max_credits = data.max_credits,
+            user_description = data.user_description,
+            class_choosing_preference = data.class_choosing_preference,
+            num_plans = data.num_plans,
+            courses = courses
+        )},
+        {"role": "user", "content": '请严格遵循上述要求，为我生成符合要求的选课计划。再次强调，回复的格式需要符合JSON格式，每个选课计划中的每门课只能出自给定的课程列表，并且时间格式需要符合要求，除时间外的一切信息不能有任何改动。'}
+    ]
+
+    response = llm.chat(messages, error_checker=format_checker, max_retries=3)
+    full_response = ""
+    async for token in response:
+        full_response += token
+
+    logger.log("课表：" + full_response)
+    full_response = remove_code_block(full_response)
+
+    return [[Course(**course) for course in plan] for plan in json.loads(full_response)]
+
+    ChosenCourses = []
     all_classes = data.all_classes.copy()
     all_classes = [c.course_name + '评价:' + c.summary + single_course_info(c) for c in all_classes]
     # 不同role content 信息重要性是否不同
     request = f'''
     用户提供以下课程作为本学期的课程备选,
     根据课程的评价, 选择课表中的课程, 并选择最合适老师和时间, 注意上课时间不要重叠
-    
+
     学分范围, 最低{data.min_credits} 最高{data.max_credits}
     用户的需求:{data.class_choosing_preference}
     {'\n'.join(all_classes)}

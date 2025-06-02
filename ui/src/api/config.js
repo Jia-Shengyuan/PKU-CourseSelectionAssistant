@@ -6,6 +6,7 @@ import { BASE_URL } from '@/config'
  * @returns {Promise<Object>} 配置信息
  */
 export const getConfig = async () => {
+    console.log('获取配置文件内容...')
     try {
         const response = await axios.get(`${BASE_URL}/config`)
         return response.data

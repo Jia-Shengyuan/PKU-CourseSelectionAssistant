@@ -432,7 +432,7 @@ const generateTimetables = async () => {
 
     const requestData = {
       all_classes: allClasses,
-      user_description: formData.userDescription,
+      user_description: "我现在的年级是" + formData.grade + ", 我的自我介绍为：" + formData.userDescription,
       plan: plan,
       class_choosing_preference: coursePreference.value,
       min_credits: minCredits.value,
@@ -512,6 +512,8 @@ const handleSetSemester = async () => {
 
 // 加载配置
 const loadConfig = async () => {
+
+  ElMessage.info('正在加载配置...')
   try {
     const config = await getConfig()
     
@@ -554,6 +556,8 @@ const loadConfig = async () => {
     minCredits.value = config.course.min_credit
     maxCredits.value = config.course.max_credit
     coursePreference.value = config.course.preference
+
+    ElMessage.success('配置加载完成')
     
   } catch (error) {
     console.error('加载配置失败:', error)
