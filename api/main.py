@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -10,7 +10,7 @@ from api.models.config import ConfigData, CONFIG_PATH
 # from api.models.crawler import TreeholeDriver
 from crawler.driver import TreeholeDriver
 from typing import List, Dict, Any
-from selevaluator.agent.llm import AsyncLLM
+from selevaluator.agent.llm import AsyncLLM, LLM_Response
 from selevaluator.agent.settings import LLM_Settings
 from selevaluator.evaluator import RawComment, Evaluator
 from selevaluator.selector import generate_single_plan
@@ -118,9 +118,27 @@ async def treehole_login() -> None:
     """
     Login to treehole, return nothing.
     """
-    # 假设你已经实现了单例(singleton)模式，后续代码可以通过static的方法get_instance()获取driver
-    driver = TreeholeDriver()
-    driver.login()
+    try:
+        # 假设你已经实现了单例(singleton)模式，后续代码可以通过static的方法get_instance()获取driver
+        driver = TreeholeDriver()
+        driver.login()
+    except Exception as e:
+        error_msg = str(e)
+        if "cannot find Chrome binary" in error_msg:
+            raise HTTPException(
+                status_code=400, 
+                detail="Chrome浏览器未安装或未正确配置。请确保已安装Chrome浏览器并重试。"
+            )
+        elif "ChromeDriver" in error_msg:
+            raise HTTPException(
+                status_code=400, 
+                detail="ChromeDriver配置错误。请检查网络连接，ChromeDriver将自动下载。"
+            )
+        else:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"浏览器启动失败：{error_msg}"
+            )
 
 @app.post("/crawler/close")
 async def treehole_close() -> None:
@@ -151,7 +169,7 @@ async def evaluate(evaluate_request: EvaluateRequest) -> StreamingResponse:
     """
     Evaluate the course by class_name and raw_text.
     """
-    E = Evaluator(evaluate_request)
+    E = Evaluator(evaluate_request, display_while_running=False)
     return StreamingResponse(
         E.evaluate(),
         media_type="text/plain"
@@ -180,23 +198,28 @@ async def evaluate_test(evaluate_request: EvaluateRequest) -> StreamingResponse:
 @app.post("/llm/plan_stream")
 async def gen_plan_stream(gen_plan_request: GenPlanRequest) -> StreamingResponse:
     """
-    生成选课方案，使用流式响应逐个返回每个方案。
-    每个方案是一个List[Course]，表示一组选课组合。
-    总共会生成num_plans个方案。
+    生成选课方案，使用流式响应返回推理过程和最终结果。
+    支持实时显示推理过程和最终的选课结果。
     """
     async def generate_plans():
-        for i in range(gen_plan_request.num_plans):
-            # 这里调用大模型生成一个选课方案
-            # 实际上，这些课程可能都是由同一次大模型调用生成的，所以你可以考虑和大模型约定输出格式，一次生成结束之后怎么标记一下
-            plan = await generate_single_plan(gen_plan_request, display=True)  # 这个函数需要你实现
-            # 将方案转换为JSON字符串并返回
-            yield json.dumps(plan, ensure_ascii=False) + "\n"
-            # 可选：在方案之间添加短暂延迟
-            await asyncio.sleep(0.1)
+        async for item in generate_single_plan(gen_plan_request, display=True):
+            if isinstance(item, LLM_Response):
+                # 推理过程中的chunk，返回JSON格式
+                yield json.dumps({
+                    "type": "reasoning",
+                    "state": item.state,
+                    "content": item.content
+                }, ensure_ascii=False) + "\n"
+            else:
+                # 最终的选课结果，返回JSON格式
+                yield json.dumps({
+                    "type": "result",
+                    "data": [[course.model_dump() for course in plan] for plan in item]
+                }, ensure_ascii=False) + "\n"
 
     return StreamingResponse(
         generate_plans(),
-        media_type="application/x-ndjson"  # 使用newline-delimited JSON格式
+        media_type="application/x-ndjson"
     )
 
 @app.post("/llm/plan")
@@ -205,9 +228,10 @@ async def gen_plan(gen_plan_request: GenPlanRequest) -> List[List[Course]]:
     生成选课方案，返回一个List[List[Course]]，表示所有选课方案。
     其中每个List[Course]表示一组选课方案。
     """
-    return await generate_single_plan(gen_plan_request, display=False)
+    async for item in generate_single_plan(gen_plan_request, display=False):
+        if not isinstance(item, LLM_Response):
+            # 只返回最终的选课结果，忽略推理过程
+            return item
     
-    return [[Course(name="数学分析", class_id=1, course_id="3", teacher="lwg", location="理教206", time="all,1,3-4;all,3,1-2;"),
-             Course(name="高等代数", class_id=1, course_id="2", teacher="wfz", location="二教103", time="all,2,3-4;all,5,1-2;"),
-             Course(name="史纲", class_id=1, course_id="1", teacher="whatever", location="理教201", time="all,3,7-8;"),
-             Course(name="恨基础", class_id=2, course_id="2", teacher="dh", location="理教403", time="all,1,5-6;odd,4,7-8;")]]
+    # 如果没有得到结果，返回空列表
+    return []

@@ -10,6 +10,7 @@ class EvaluateRequest(BaseModel):
     course_name: str
     raw_text: str
     choices: List[str]
+    model_name: str = "Pro/deepseek-ai/DeepSeek-V3"
 
 # 这些 class 都是暂定的，可以按照你的需求进行修改，在群里说一声即可
 class EvaluatedCourse(BaseModel):
@@ -25,3 +26,4 @@ class GenPlanRequest(BaseModel):
     min_credits: int
     max_credits: int
     num_plans: int = 1 # 生成多少个选课计划
+    model_name: str = "Pro/deepseek-ai/DeepSeek-R1"

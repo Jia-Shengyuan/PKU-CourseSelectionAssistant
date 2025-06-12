@@ -87,10 +87,21 @@ def new_login():
     options.add_argument("--disable-dev-shm-usage")
 
     # 使用webdriver_manager自动管理ChromeDriver版本
-    service = Service(ChromeDriverManager().install())
-
-    # 启动浏览器并尝试访问
-    driver = webdriver.Chrome(service=service, options=options)
+    service = Service(ChromeDriverManager().install())    # 启动浏览器并尝试访问
+    try:
+        driver = webdriver.Chrome(service=service, options=options)
+    except Exception as e:
+        print("❌ Chrome浏览器启动失败！")
+        if "cannot find Chrome binary" in str(e):
+            print("错误原因：未找到Chrome浏览器。")
+            print("解决方案：")
+            print("1. 请下载并安装Chrome浏览器：https://www.google.com/chrome/")
+            print("2. 确保Chrome已正确安装在默认路径")
+            print("3. 如果Chrome安装在非默认路径，请将其添加到系统PATH环境变量")
+        else:
+            print(f"错误详情：{e}")
+        raise e
+    
     if is_logged_in(driver):
         print("✅ 已复用浏览器登录状态，无需验证码。")
         return driver

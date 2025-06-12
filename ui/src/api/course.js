@@ -110,7 +110,7 @@ export const activateDatabase = async (semester) => {
 }
 
 // 获取课程评价
-export const getCourseEvaluation = async (courseName, rawText, choices, onChunk) => {
+export const getCourseEvaluation = async (courseName, rawText, choices, modelName, onChunk) => {
   try {
     const response = await fetch(`${BASE_URL}/llm/evaluate_test`, {
       method: 'POST',
@@ -120,7 +120,8 @@ export const getCourseEvaluation = async (courseName, rawText, choices, onChunk)
       body: JSON.stringify({
         course_name: courseName,
         raw_text: rawText,
-        choices: choices // 新增
+        choices: choices,
+        model_name: modelName
       })
     });
 
@@ -158,6 +159,63 @@ export const genPlan = async (requestData) => {
         return response.data
     } catch (error) {
         console.error('生成选课方案失败:', error)
+        throw error
+    }
+}
+
+/**
+ * 流式生成课表，支持实时显示推理过程
+ * @param {Object} requestData - 请求数据
+ * @param {Function} onReasoningChunk - 推理过程回调函数
+ * @param {Function} onResult - 结果回调函数
+ * @param {string} modelName - 模型名称
+ * @returns {Promise<void>}
+ */
+export const genPlanStream = async (requestData, onReasoningChunk, onResult, modelName) => {
+    try {
+        // 添加模型名称到请求数据中
+        const requestWithModel = {
+            ...requestData,
+            model_name: modelName
+        }
+        
+        const response = await fetch(`${BASE_URL}/llm/plan_stream`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestWithModel)
+        })
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+
+        while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+
+            const chunk = decoder.decode(value, { stream: true })
+            const lines = chunk.split('\n').filter(line => line.trim())
+
+            for (const line of lines) {
+                try {
+                    const data = JSON.parse(line)
+                    if (data.type === 'reasoning') {
+                        onReasoningChunk && onReasoningChunk(data)
+                    } else if (data.type === 'result') {
+                        onResult && onResult(data.data)
+                    }
+                } catch (e) {
+                    console.warn('解析JSON失败:', e, '原始数据:', line)
+                }
+            }
+        }
+    } catch (error) {
+        console.error('流式生成选课方案失败:', error)
         throw error
     }
 }

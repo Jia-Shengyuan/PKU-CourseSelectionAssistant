@@ -1,8 +1,9 @@
-{
-    
+{   
     "model": {
         "base_url": "https://api.siliconflow.cn/v1/",
         "model_name": "Pro/deepseek-ai/DeepSeek-V3",
+        "evaluate_model_name": "Pro/deepseek-ai/DeepSeek-V3",
+        "gen_plan_model_name": "Pro/deepseek-ai/DeepSeek-R1",
         "api_key": "",
         "temperature": 0.7,
         "top_p": 0.95,

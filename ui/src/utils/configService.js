@@ -3,11 +3,12 @@ import { saveConfig } from '@/api/config'
 import { unref } from 'vue'
 
 export const savePreference = async (formData, courses, minCredits, maxCredits, coursePreference) => {
-  try {
-    const config = {
+  try {    const config = {
       model: {
         base_url: formData.apiProvider,
-        model_name: formData.modelName,
+        model_name: formData.modelName, // 保留旧字段以兼容
+        evaluate_model_name: formData.evaluateModelName,
+        gen_plan_model_name: formData.genPlanModelName,
         api_key: formData.apiKey,
         temperature: formData.temperature,
         top_p: formData.topP,

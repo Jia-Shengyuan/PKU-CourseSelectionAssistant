@@ -53,6 +53,30 @@
    pnpm install
    ```
 
+### 浏览器配置
+本项目使用自动化工具爬取树洞评价，需要安装 Chrome 浏览器：
+
+1. **安装 Chrome 浏览器**
+   - 访问 [Chrome 官网](https://www.google.com/chrome/) 下载并安装
+   - 确保 Chrome 安装在默认路径
+   - 安装完成后，启动一次 Chrome 确保安装成功
+
+2. **ChromeDriver 自动管理**
+   - 本项目使用 `webdriver-manager` 自动管理 ChromeDriver 版本
+   - 首次运行时会自动下载匹配的 ChromeDriver
+   - 无需手动下载或配置 ChromeDriver
+
+3. **常见问题**
+   - 如果遇到 "cannot find Chrome binary" 错误：
+     - 确保已正确安装 Chrome 浏览器
+     - 检查 Chrome 是否在系统 PATH 环境变量中
+     - 尝试重启计算机后再运行
+   
+   - 如果遇到网络问题无法下载 ChromeDriver：
+     - 检查网络连接
+     - 确保防火墙未阻止下载
+     - 可以尝试使用 VPN 或更换网络环境
+
 ## 项目运行
 
 项目的运行需要同时启用前后端
@@ -92,11 +116,24 @@ pnpm run dev
 
 ## 树洞信息获取
 
+**重要提醒**：树洞爬虫功能需要 Chrome 浏览器支持，请确保已按照上述"浏览器配置"部分安装 Chrome。
+
 update 2025.5.9 by zcxxnqwq:
 
 修了爬虫。实现了每门课的测评分别存储在一个 HTML 里，存储在 `crawler` 目录下。
 
 只存登录 cookies 似乎因为反爬虫机制无法自动登录，以后的每次登录依然需要短信验证码。现采用从 Chrome 用户数据目录直接复用登录态的方法，`config.json` 新增 `chrome_user_data_dir` 用于让用户填写用户目录地址，目前我的电脑上不出错的方式是自己新建文件夹 `C:\Users\用户名\PKU-Chrome-Profile`，在 config 里填写这个路径，然后需要手动登录一次，使这个目录下存储登录状态，之后每次本设备访问树洞无需登录。
+
+### 浏览器配置补充说明
+
+1. **Chrome 用户数据目录设置**：
+   - 在前端界面的"爬虫配置"部分，需要设置 Chrome 用户数据目录
+   - 建议创建专用目录，如：`C:\Users\你的用户名\PKU-Chrome-Profile`
+   - 首次使用时需要在弹出的浏览器窗口中手动登录树洞
+
+2. **常见错误处理**：
+   - 如果遇到 "cannot find Chrome binary" 错误，请确保已安装 Chrome 浏览器
+   - 如果 ChromeDriver 下载失败，可能是网络问题，请检查网络连接或更换网络环境
 
 # 课程评分器
 

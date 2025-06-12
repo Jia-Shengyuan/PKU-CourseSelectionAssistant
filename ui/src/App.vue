@@ -1,8 +1,9 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Loading, Check } from '@element-plus/icons-vue'
 import axios from 'axios'
-import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan } from '@/api/course'
+import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan, genPlanStream } from '@/api/course'
 import { getConfig, saveConfig } from '@/api/config'
 import { loginTreehole, searchTreehole } from '@/api/crawler'
 import { generateTableData } from '@/api/timetable'
@@ -16,7 +17,9 @@ const formData = reactive({
   semester: '',
   userDescription: '',
   apiProvider: 'https://api.siliconflow.cn/v1/',
-  modelName: 'deepseek-ai/DeepSeek-V3',
+  modelName: 'deepseek-ai/DeepSeek-V3', // 将要废除
+  evaluateModelName: 'Pro/deepseek-ai/DeepSeek-V3',
+  genPlanModelName: 'Pro/deepseek-ai/DeepSeek-R1',
   apiKey: '',
   temperature: 0.7,
   topP: 0.9,
@@ -77,6 +80,11 @@ const newClass = reactive({
 const isLoadingConfig = ref(false)
 const isGeneratingTimetable = ref(false)
 const timetableTotalCredits = ref(0)
+
+// 推理过程相关状态
+const reasoningContent = ref('')
+const isReasoning = ref(false)
+const reasoningCollapsed = ref(false)
 
 // 计算当前正在添加班级的课程名称
 const addingCourseName = computed(() => {
@@ -406,12 +414,12 @@ const handleCourseEvaluation = async () => {
       try {
         // 初始化评价内容
         courseEvaluationContent.value[course.name] = ''
-        
-        // 获取大模型评价（流式）
+          // 获取大模型评价（流式）
         await getCourseEvaluation(
           course.name,
           rawText,
           courses.value.find(c => c.name === course.name)?.classes?.map(cls => cls.teacher) || [],
+          formData.evaluateModelName, // 传递评价模型名称
           (chunk) => {
             // 更新评价内容
             courseEvaluationContent.value[course.name] += chunk
@@ -467,7 +475,20 @@ const handleCourseEvaluation = async () => {
 const generateTimetables = async () => {
   try {
     isGeneratingTimetable.value = true
+    isReasoning.value = true
+    reasoningContent.value = ''
+    reasoningCollapsed.value = false
     timetableTotalCredits.value = 0
+    timetables.value = []
+    
+    // 自动滚动到推理区域
+    setTimeout(() => {
+      const reasoningElement = document.querySelector('.reasoning-card')
+      if (reasoningElement) {
+        reasoningElement.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }
+    }, 100)
+    
     // 准备课程评价数据
     const allClasses = courses.value.map(course => ({
       course_name: course.name,
@@ -496,16 +517,49 @@ const generateTimetables = async () => {
       num_plans: formData.num_timetable
     }
 
-    console.log('发送的请求数据:', requestData)  // 添加日志
-
-    const response = await genPlan(requestData)
-    timetables.value = response
-    activeTimetableIndex.value = 0
-    updateTimetableTotalCredits()
-    ElMessage.success('课表生成成功')
+    console.log('发送的请求数据:', requestData)  // 添加日志    // 使用流式API
+    await genPlanStream(
+      requestData,
+      // 推理过程回调
+      (reasoningChunk) => {
+        if (reasoningChunk.state === 'reasoning') {
+          reasoningContent.value += reasoningChunk.content
+        } else if (reasoningChunk.state === 'retrying') {
+          reasoningContent.value += `\n\n[重试] ${reasoningChunk.content}\n`
+        } else if (reasoningChunk.state === 'error') {
+          reasoningContent.value += `\n\n[错误] ${reasoningChunk.content}\n`
+        }
+        
+        // 自动滚动到推理内容底部
+        setTimeout(() => {
+          const reasoningElement = document.querySelector('.reasoning-content')
+          if (reasoningElement) {
+            reasoningElement.scrollTop = reasoningElement.scrollHeight
+          }
+        }, 10)
+      },
+      // 结果回调
+      (result) => {
+        isReasoning.value = false
+        timetables.value = result
+        activeTimetableIndex.value = 0
+        updateTimetableTotalCredits()
+        ElMessage.success('课表生成成功')
+        
+        // 自动滚动到课表区域
+        setTimeout(() => {
+          const timetableElement = document.querySelector('.timetable-section')
+          if (timetableElement) {
+            timetableElement.scrollIntoView({ behavior: 'smooth' })
+          }
+        }, 100)
+      },
+      formData.genPlanModelName // 传递生成课表模型名称
+    )
   } catch (error) {
     console.error('生成课表失败:', error)
     ElMessage.error('生成课表失败')
+    isReasoning.value = false
   } finally {
     isGeneratingTimetable.value = false
   }
@@ -577,10 +631,11 @@ const loadConfig = async () => {
   try {
 
     const config = await getConfig()
-    
-    // 更新表单数据
+      // 更新表单数据
     formData.apiProvider = config.model.base_url
-    formData.modelName = config.model.model_name
+    formData.modelName = config.model.model_name // 保留旧的以兼容
+    formData.evaluateModelName = config.model.evaluate_model_name || config.model.model_name
+    formData.genPlanModelName = config.model.gen_plan_model_name || config.model.model_name
     formData.apiKey = config.model.api_key
     formData.temperature = config.model.temperature
     formData.topP = config.model.top_p
@@ -706,14 +761,20 @@ onMounted(async () => {
               <el-input v-model="formData.apiProvider" placeholder="请输入大模型API提供网站链接" />
             </el-form-item>
           </el-col>
-        </el-row>
-        <el-row :gutter="20">
+        </el-row>        <el-row :gutter="20">
           <el-col :span="12">
-            <el-form-item label="模型名称">
-              <el-input v-model="formData.modelName" placeholder="请输入大模型名称" />
+            <el-form-item label="汇总评价">
+              <el-input v-model="formData.evaluateModelName" placeholder="请输入评价课程使用的大模型名称" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="生成课表">
+              <el-input v-model="formData.genPlanModelName" placeholder="请输入生成课表使用的大模型名称" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="24">
             <el-form-item label="API密钥">
               <el-input v-model="formData.apiKey" type="password" placeholder="请输入API密钥" />
             </el-form-item>
@@ -1003,11 +1064,54 @@ onMounted(async () => {
           <el-button @click="addClassDialogVisible = false">取消</el-button>
           <el-button type="primary" @click="confirmAddClass">确定</el-button>
         </span>
-      </template>
-    </el-dialog>
+      </template>    </el-dialog>
+
+    <!-- 推理过程展示区域 -->
+    <el-card v-if="isReasoning || reasoningContent" class="reasoning-card">
+      <template #header>
+        <div class="card-header">
+          <span>AI 推理过程</span>
+          <el-button 
+            v-if="reasoningContent"
+            text 
+            type="primary" 
+            @click="reasoningCollapsed = !reasoningCollapsed"
+            style="margin-left: auto;"
+          >
+            {{ reasoningCollapsed ? '展开' : '折叠' }}
+          </el-button>
+        </div>
+      </template>      <div v-show="!reasoningCollapsed">
+        <!-- 推理状态指示器 -->
+        <div v-if="isReasoning" class="reasoning-status">
+          <el-icon class="is-loading"><Loading /></el-icon>
+          <span style="margin-left: 8px;">AI 正在推理中...</span>
+          <span v-if="reasoningContent" style="margin-left: 16px; color: #67c23a;">
+            已输出 {{ reasoningContent.length }} 字符
+          </span>
+        </div>
+        
+        <!-- 推理内容区域 -->
+        <div 
+          v-if="reasoningContent"
+          class="reasoning-content"
+        >{{ reasoningContent }}</div>
+        
+        <!-- 等待推理内容的占位符 -->
+        <div v-if="isReasoning && !reasoningContent" class="reasoning-placeholder">
+          正在连接AI模型，等待推理内容...
+        </div>
+        
+        <!-- 推理完成提示 -->
+        <div v-if="!isReasoning && reasoningContent" class="reasoning-completed">
+          <el-icon><Check /></el-icon>
+          <span style="margin-left: 8px;">推理完成</span>
+        </div>
+      </div>
+    </el-card>
 
     <!-- 课表展示区域 -->
-    <el-card v-if="isGeneratingTimetable || timetables.length > 0" class="timetable-card">
+    <el-card v-if="isGeneratingTimetable || timetables.length > 0" class="timetable-card timetable-section">
       <template #header>
         <div class="card-header">
           <span>课表方案</span>
