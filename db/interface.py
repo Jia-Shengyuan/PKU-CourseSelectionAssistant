@@ -76,6 +76,7 @@ def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
     grade = fetch_request.grade
     plan_path = fetch_request.plan_path
     accept_advanced_class = fetch_request.accept_advanced_class
+    grade = grade[:2]
     if semester[-1] == '1':
         semester = "上"
     elif semester[-1] =='2':
