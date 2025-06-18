@@ -22,9 +22,9 @@
 
 8. 短暂等待后，你就可以看到大模型对每门课（包括每名老师）的多维度评价了。待所有课程评价结束之后，大模型会开始生成课表。这一步会消耗比较长的时间，请耐心等待。
 
-9. 如果你之后还想查看大模型对课程的评价，可以在 `selevaluator/data` 下查看。如果你想查看树洞的原始评价，可以在 `crawler/data` 下查看。
+9. 课表将被生成并展式，同时保存在 `output` 文件夹下。如果你之后还想查看大模型对课程的评价，可以在 `selevaluator/data` 下查看。如果你想查看树洞的原始评价，可以在 `crawler/data` 下查看。
 
-## 环境配置
+## 环境配置（如果你想运行本项目）
 
 ### Python环境配置
 1. 安装 Python (开发环境为 3.12.7 版本)
@@ -36,7 +36,24 @@
    pip install -r requirements.txt
    ```
 
-### 前端环境配置
+### 浏览器配置
+本项目使用自动化工具爬取树洞评价，需要安装 Chrome 浏览器：
+   - 访问 [Chrome 官网](https://www.google.com/chrome/) 下载并安装
+   - 确保 Chrome 在系统 PATH 环境变量中
+   - 安装完成后，启动一次 Chrome 确保安装成功
+   - 无需手动下载或配置 ChromeDriver（如果你不知道这是什么，那就不必关心）
+
+### 项目运行
+
+打开终端，进入根目录后运行
+```bash
+uvicorn api.main:app --reload
+```
+可以看到出现了一个网址，打开即可。通常为 http://127.0.0.1:8000。
+
+打开前端网页后，根据前端配置选课信息，即可开始自动爬取评价并选课。其中唯一不能在前端完成的一步是配置你的培养方案，你需要将其命名为 `plan.pdf` 并放在项目根目录下的 `config` 文件夹中。
+
+### 前端环境配置（如果你想对前端进行修改/开发）
 1. 安装 Node.js
    - 访问 [Node.js 官网](https://nodejs.org/) 下载并安装
    - 建议安装 LTS（长期支持）版本
@@ -53,31 +70,7 @@
    pnpm install
    ```
 
-### 浏览器配置
-本项目使用自动化工具爬取树洞评价，需要安装 Chrome 浏览器：
-
-1. **安装 Chrome 浏览器**
-   - 访问 [Chrome 官网](https://www.google.com/chrome/) 下载并安装
-   - 确保 Chrome 安装在默认路径
-   - 安装完成后，启动一次 Chrome 确保安装成功
-
-2. **ChromeDriver 自动管理**
-   - 本项目使用 `webdriver-manager` 自动管理 ChromeDriver 版本
-   - 首次运行时会自动下载匹配的 ChromeDriver
-   - 无需手动下载或配置 ChromeDriver
-
-3. **常见问题**
-   - 如果遇到 "cannot find Chrome binary" 错误：
-     - 确保已正确安装 Chrome 浏览器
-     - 检查 Chrome 是否在系统 PATH 环境变量中
-     - 尝试重启计算机后再运行
-   
-   - 如果遇到网络问题无法下载 ChromeDriver：
-     - 检查网络连接
-     - 确保防火墙未阻止下载
-     - 可以尝试使用 VPN 或更换网络环境
-
-## 项目运行
+## 项目运行（如果你要进行开发）
 
 项目的运行需要同时启用前后端
 
@@ -94,7 +87,7 @@ pnpm run dev
 
 之后按照这个终端输出打开前端对应网页即可，默认情况下一般为 [http://localhost:5173/](http://localhost:5173/)。
 
-打开前端网页后，根据前端配置选课信息，即可开始自动爬取评价并选课。其中唯一不能在前端完成的一步是配置你的培养方案，你需要将其命名为 `plan.pdf` 并放在项目根目录下的 `config` 文件夹中。
+
 
 ## 获取大模型 API Key
 
@@ -103,14 +96,6 @@ pnpm run dev
 下面的教程基于[硅基流动](https://siliconflow.cn/)平台，其他平台获取 API Key 的教程可以去网上搜索。
 
 硅基流动你也自己搜吧。
-
-------
-
-## LLM 调用
-
-- 先在 `config/config.json` 配置模型
-- 之后可以在 `src` 文件夹中的 `chat_example.py` 可以用来测试
-- 调用 `LLM` 或 `AsyncLLM` 的 `chat` 方法即可对话，调用方法见 `chat_example.py`
 
 -------
 
