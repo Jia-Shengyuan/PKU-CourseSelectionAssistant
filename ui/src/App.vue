@@ -8,6 +8,7 @@ import { getConfig, saveConfig } from '@/api/config'
 import { loginTreehole, searchTreehole } from '@/api/crawler'
 import { generateTableData } from '@/api/timetable'
 import { savePreference } from '@/utils/configService'
+import { formatTeacherName } from '@/utils/teacherFormatter'
 
 // 配置信息
 const formData = reactive({
@@ -354,12 +355,12 @@ watch(activeTimetableIndex, updateTimetableTotalCredits)
 watch(timetables, updateTimetableTotalCredits)
 
 const handleCourseEvaluation = async () => {
+
   if (courses.value.length === 0) {
     ElMessage.warning('请至少添加一门课程')
     return
   }
 
-  // 先保存当前配置和课程
   await savePreference(formData, courses, minCredits, maxCredits, coursePreference)
 
   try {
@@ -473,6 +474,7 @@ const handleCourseEvaluation = async () => {
 
 // 生成课表
 const generateTimetables = async () => {
+  
   try {
     isGeneratingTimetable.value = true
     isReasoning.value = true
@@ -517,7 +519,7 @@ const generateTimetables = async () => {
       num_plans: formData.num_timetable
     }
 
-    console.log('发送的请求数据:', requestData)  // 添加日志    // 使用流式API
+    console.log('发送的请求数据:', requestData)
     await genPlanStream(
       requestData,
       // 推理过程回调
@@ -883,10 +885,13 @@ onMounted(async () => {
                 </el-button>
               </div>
             </div>
-          </template>
-          <el-table :data="course.classes" style="width: 100%">
+          </template>          <el-table :data="course.classes" style="width: 100%">
             <el-table-column prop="id" label="课程编号" width="100" />
-            <el-table-column prop="teacher" label="教师" />
+            <el-table-column label="教师">
+              <template #default="scope">
+                {{ formatTeacherName(scope.row.teacher) }}
+              </template>
+            </el-table-column>
             <el-table-column prop="time" label="上课时间" />
             <el-table-column prop="location" label="上课地点" />
             <el-table-column label="操作" width="200">
@@ -1112,14 +1117,12 @@ onMounted(async () => {
 
     <!-- 课表展示区域 -->
     <el-card v-if="isGeneratingTimetable || timetables.length > 0" class="timetable-card timetable-section">
-      <template #header>
-        <div class="card-header">
+      <template #header>        <div class="card-header">
           <span>课表方案</span>
           <div class="timetable-tabs" style="display:flex;align-items:center;">
             <span v-if="isGeneratingTimetable" style="color:#999;margin-left:16px;">生成中...</span>
             <template v-else-if="timetables.length > 0">
-              <span style="color:#222;font-size:16px;margin-left:16px;">总学分：{{ timetableTotalCredits }}</span>
-              <el-radio-group v-model="activeTimetableIndex" size="large" style="margin-left:48px;align-self:center;">
+              <span style="color:#222;font-size:16px;margin-left:16px;">总学分：{{ timetableTotalCredits }}</span>              <el-radio-group v-model="activeTimetableIndex" size="large" style="margin-left:48px;align-self:center;">
                 <el-radio-button v-for="(tb, idx) in timetables" :key="idx" :label="idx" style="font-size:18px;">方案{{ idx + 1 }}</el-radio-button>
               </el-radio-group>
             </template>
@@ -1155,88 +1158,86 @@ onMounted(async () => {
         <el-table-column
           prop="周一"
           label="周一"
-        >
-          <template #default="scope">
+        >          <template #default="scope">
             <div v-if="scope.row['周一']" class="course-cell" :style="scope.row['周一'].bgColor ? { backgroundColor: scope.row['周一'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周一'].name }}</div>
-              <div class="course-teacher">{{ scope.row['周一'].teacher }}</div>
-              <div class="course-location">{{ scope.row['周一'].location }}</div>
+              <div class="course-teacher">{{ formatTeacherName(scope.row['周一'].teacher) }}</div>
+              <div class="course-location">{{ (scope.row['周一'].weekType || '每周') + ' ' + (scope.row['周一'].location || '') }}</div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
           prop="周二"
           label="周二"
-        >
-          <template #default="scope">
+        >          <template #default="scope">
             <div v-if="scope.row['周二']" class="course-cell" :style="scope.row['周二'].bgColor ? { backgroundColor: scope.row['周二'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周二'].name }}</div>
-              <div class="course-teacher">{{ scope.row['周二'].teacher }}</div>
-              <div class="course-location">{{ scope.row['周二'].location }}</div>
+              <div class="course-teacher">{{ formatTeacherName(scope.row['周二'].teacher) }}</div>
+              <div class="course-location">{{ (scope.row['周二'].weekType || '每周') + ' ' + (scope.row['周二'].location || '') }}</div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
           prop="周三"
           label="周三"
-        >
-          <template #default="scope">
+        >          <template #default="scope">
             <div v-if="scope.row['周三']" class="course-cell" :style="scope.row['周三'].bgColor ? { backgroundColor: scope.row['周三'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周三'].name }}</div>
-              <div class="course-teacher">{{ scope.row['周三'].teacher }}</div>
-              <div class="course-location">{{ scope.row['周三'].location }}</div>
+              <div class="course-teacher">{{ formatTeacherName(scope.row['周三'].teacher) }}</div>
+              <div class="course-location">{{ (scope.row['周三'].weekType || '每周') + ' ' + (scope.row['周三'].location || '') }}</div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
           prop="周四"
           label="周四"
-        >
-          <template #default="scope">
+        >          <template #default="scope">
             <div v-if="scope.row['周四']" class="course-cell" :style="scope.row['周四'].bgColor ? { backgroundColor: scope.row['周四'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周四'].name }}</div>
-              <div class="course-teacher">{{ scope.row['周四'].teacher }}</div>
-              <div class="course-location">{{ scope.row['周四'].location }}</div>
+              <div class="course-teacher">{{ formatTeacherName(scope.row['周四'].teacher) }}</div>
+              <div class="course-location">{{ (scope.row['周四'].weekType || '每周') + ' ' + (scope.row['周四'].location || '') }}</div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
           prop="周五"
           label="周五"
-        >
-          <template #default="scope">
+        >          <template #default="scope">
             <div v-if="scope.row['周五']" class="course-cell" :style="scope.row['周五'].bgColor ? { backgroundColor: scope.row['周五'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周五'].name }}</div>
-              <div class="course-teacher">{{ scope.row['周五'].teacher }}</div>
-              <div class="course-location">{{ scope.row['周五'].location }}</div>
+              <div class="course-teacher">{{ formatTeacherName(scope.row['周五'].teacher) }}</div>
+              <div class="course-location">{{ (scope.row['周五'].weekType || '每周') + ' ' + (scope.row['周五'].location || '') }}</div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
           prop="周六"
           label="周六"
-        >
-          <template #default="scope">
+        >          <template #default="scope">
             <div v-if="scope.row['周六']" class="course-cell" :style="scope.row['周六'].bgColor ? { backgroundColor: scope.row['周六'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周六'].name }}</div>
-              <div class="course-teacher">{{ scope.row['周六'].teacher }}</div>
-              <div class="course-location">{{ scope.row['周六'].location }}</div>
+              <div class="course-teacher">{{ formatTeacherName(scope.row['周六'].teacher) }}</div>
+              <div class="course-location">{{ (scope.row['周六'].weekType || '每周') + ' ' + (scope.row['周六'].location || '') }}</div>
             </div>
           </template>
         </el-table-column>
         <el-table-column
           prop="周日"
           label="周日"
-        >
-          <template #default="scope">
+        >          <template #default="scope">
             <div v-if="scope.row['周日']" class="course-cell" :style="scope.row['周日'].bgColor ? { backgroundColor: scope.row['周日'].bgColor } : {}">
               <div class="course-name">{{ scope.row['周日'].name }}</div>
-              <div class="course-teacher">{{ scope.row['周日'].teacher }}</div>
-              <div class="course-location">{{ scope.row['周日'].location }}</div>
+              <div class="course-teacher">{{ formatTeacherName(scope.row['周日'].teacher) }}</div>
+              <div class="course-location">{{ (scope.row['周日'].weekType || '每周') + ' ' + (scope.row['周日'].location || '') }}</div>
             </div>
           </template>
         </el-table-column>
       </el-table>
+      
+      <!-- 课表存储提示 -->
+      <div v-if="timetables && timetables.length > 0" style="text-align: center; margin-top: 16px; color: #666; font-size: 14px;">
+        课表已自动保存到 output 文件夹下
+      </div>
     </el-card>
   </div>
 </template>

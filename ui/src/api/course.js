@@ -172,6 +172,9 @@ export const genPlan = async (requestData) => {
  * @returns {Promise<void>}
  */
 export const genPlanStream = async (requestData, onReasoningChunk, onResult, modelName) => {
+
+    console.log('开始流式生成选课方案:', requestData, '模型:', modelName)
+
     try {
         // 添加模型名称到请求数据中
         const requestWithModel = {

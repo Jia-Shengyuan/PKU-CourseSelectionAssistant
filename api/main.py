@@ -4,9 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
 import json
+import os
+from datetime import datetime
 from api.models.course import Course, CourseSearchRequest, FetchCourseByPlanRequest
 from api.models.chat import EvaluateRequest, GenPlanRequest, TreeholeSearchRequest
 from api.models.config import ConfigData, CONFIG_PATH
+from api.output.excel_exporter import export_to_excel
 # from api.models.crawler import TreeholeDriver
 from crawler.driver import TreeholeDriver
 from typing import List, Dict, Any
@@ -195,6 +198,44 @@ async def evaluate_test(evaluate_request: EvaluateRequest) -> StreamingResponse:
         media_type="text/plain"
     )
 
+@app.post("/llm/plan_stream_")
+async def gen_test_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:
+
+    fake_courses = [
+        [
+            Course(name="数学分析II", class_id=1, course_id="1", time="all,1,3-4;all,3,1-2;", teacher="lwg", credit=5),
+            Course(name="高等代数II", class_id=2, course_id="2", time="all,2,3-4;all,5,1-2;", teacher="wfz", credit=4)
+        ],
+        [
+            Course(name="恨基础", class_id=3, course_id="3", time="all,1,5-6;odd,4,7-8;", teacher="dh", credit=3)
+        ]
+    ]
+    
+    async def gen_fake_result():
+        think = ["这是一个模拟的思考过程", "我将输出测试用的假课表"]
+        for item in think:
+            yield json.dumps({
+                "type": "reasoning",
+                "state": "thinking",
+                "content": item
+            }, ensure_ascii=False) + "\n"
+            await asyncio.sleep(0.5)
+
+        os.makedirs("output", exist_ok=True)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"output/课表_{timestamp}.xlsx"
+        export_to_excel(fake_courses, filename)  # 导出到Excel文件
+
+        yield json.dumps({
+            "type": "result",
+            "data": [[course.model_dump() for course in plan] for plan in fake_courses]
+        }, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(
+        gen_fake_result(),
+        media_type="application/x-ndjson"
+    )
+
 @app.post("/llm/plan_stream")
 async def gen_plan_stream(gen_plan_request: GenPlanRequest) -> StreamingResponse:
     """
@@ -211,6 +252,10 @@ async def gen_plan_stream(gen_plan_request: GenPlanRequest) -> StreamingResponse
                     "content": item.content
                 }, ensure_ascii=False) + "\n"
             else:
+                os.makedirs("output", exist_ok=True)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"output/课表_{timestamp}.xlsx"
+                export_to_excel(item, filename) # 导出到Excel文件
                 # 最终的选课结果，返回JSON格式
                 yield json.dumps({
                     "type": "result",
