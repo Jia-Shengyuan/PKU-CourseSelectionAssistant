@@ -184,7 +184,8 @@ const addCourse = async () => {
       if (exist) {
         // 合并班级，避免重复
         classes.forEach(cls => {
-          if (!exist.classes.some(c => c.id === cls.id && c.teacher === cls.teacher)) {
+          // && teacher === ?
+          if (!exist.classes.some(c => c.id === cls.id)) {
             exist.classes.push(cls);
           }
         });
@@ -225,7 +226,9 @@ const confirmAddClass = async () => {
     const courseData = await fetchCourse(
       course.name,
       newClass.class_id ? parseInt(newClass.class_id) : null,
-      newClass.teacher || null
+      newClass.teacher || null,
+      false,
+      false
     )
     
     if (!courseData || courseData.length === 0) {
@@ -726,7 +729,7 @@ onMounted(async () => {
         <el-row :gutter="20">
           <el-col :span="8">
             <el-form-item label="年级">
-              <el-input v-model="formData.grade" placeholder="请输入年级（如大一）" />
+              <el-input v-model="formData.grade" placeholder="请输入年级（如大一下）" />
             </el-form-item>
           </el-col>
           <el-col :span="8">

@@ -20,11 +20,11 @@ export const savePreference = async (formData, courses, minCredits, maxCredits, 
         grade: formData.grade,
         semester: formData.semester,
         introduction: formData.userDescription
-      },
+      },      
       course: {
         course_list: unref(courses).map(course => ({
           name: course.name,
-          class_ids: course.classes.map(c => parseInt(c.id))
+          class_ids: [...new Set(course.classes.map(c => parseInt(c.id)))] // 使用Set去重，防止重复班号
         })),
         min_credit: unref(minCredits),
         max_credit: unref(maxCredits),

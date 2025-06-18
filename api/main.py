@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
@@ -30,7 +31,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
+    allow_credentials=True,    
     allow_methods=["*"],  # 允许所有方法
     allow_headers=["*"],  # 允许所有头部
 )
@@ -121,6 +122,7 @@ async def treehole_login() -> None:
     """
     Login to treehole, return nothing.
     """
+    print("Logging in to treehole...")
     try:
         # 假设你已经实现了单例(singleton)模式，后续代码可以通过static的方法get_instance()获取driver
         driver = TreeholeDriver()
@@ -198,8 +200,10 @@ async def evaluate_test(evaluate_request: EvaluateRequest) -> StreamingResponse:
         media_type="text/plain"
     )
 
-@app.post("/llm/plan_stream_")
+@app.post("/llm/plan_stream_test")
 async def gen_test_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:
+
+    print(gen_plan_request)
 
     fake_courses = [
         [
@@ -280,3 +284,9 @@ async def gen_plan(gen_plan_request: GenPlanRequest) -> List[List[Course]]:
     
     # 如果没有得到结果，返回空列表
     return []
+
+# 挂载静态文件服务（用于生产环境）
+# 必须在所有API路由定义之后，确保API路由优先级更高
+ui_dist_path = "ui/dist"
+if os.path.exists(ui_dist_path):
+    app.mount("/", StaticFiles(directory=ui_dist_path, html=True), name="static")
