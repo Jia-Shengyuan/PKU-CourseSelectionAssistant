@@ -84,10 +84,7 @@ def search_treehole(course_name: str, html_content: str, max_len: int = 5, sleep
                     driver.execute_script("arguments[0].scrollTop = arguments[0].scrollHeight", comment_section)
                     time.sleep(sleep_between_scroll)
                     new_height = driver.execute_script("return arguments[0].scrollHeight", comment_section)
-                    if new_height == last_height:
-                        break
                     last_height = new_height
-
                     comments = driver.find_elements(By.XPATH, '//*[@id="detail-scroll detail-scroll2"]/div/div')
                     for comment in comments:
                         content = comment.text if comment else "无内容"
@@ -95,6 +92,8 @@ def search_treehole(course_name: str, html_content: str, max_len: int = 5, sleep
                             print("find!")
                             comments_collected.append(content)
                             html_content += f"<p>{content}</p><hr>"
+                    if new_height == last_height:
+                        break
 
                 click_back_button(driver)
 
