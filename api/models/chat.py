@@ -5,7 +5,7 @@ from api.models.course import Course
 class TreeholeSearchRequest(BaseModel):
     course_name: str
     max_len: int = 5 # 搜多少条
-    teacher: Optional[str] = None
+    teachers: List[str] = []
 
 class EvaluateRequest(BaseModel):
     course_name: str

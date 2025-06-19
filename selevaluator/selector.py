@@ -178,7 +178,7 @@ def format_checker(response: str) -> List[str]:
                             time_table[key] = (c.name, c.class_id)
 
             except Exception as e:
-                errors.append(f"你的回复中有课程信息不符合Course模型的要求: {e}")
+                errors.append(f"你的回复中有课程信息不符合Course类型的要求: {e}")
 
     if not errors:
         return []

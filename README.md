@@ -6,7 +6,7 @@
 
 你需要做的：
 
-1. 将项目下载到本地，并解压到你喜欢的地方。$\newline$你也可以通过在终端中运行 `git clone https://github.com/Jia-Shengyuan/PKU-CourseSelectionAssistant.git` 指令来下载本项目到你在终端中已经打开的文件夹（如果你的电脑上已经安装了 `git`）。
+1. 将项目下载到本地，并解压到你喜欢的地方。你也可以通过在终端中运行 `git clone https://github.com/Jia-Shengyuan/PKU-CourseSelectionAssistant.git` 指令来下载本项目到你在终端中已经打开的文件夹（如果你的电脑上已经安装了 `git`）。
 
 2. 按照下方教程配置好环境，安装项目依赖，并将你的培养方案命名为 `plan.pdf`，之后放在 `config` 文件夹下。大模型需要知道你的培养方案才能更好的帮助你选课。
 
