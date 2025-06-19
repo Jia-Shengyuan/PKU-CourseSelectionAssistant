@@ -158,6 +158,7 @@ async def treehole_search(search_request: TreeholeSearchRequest) -> str:
     """
     Search treehole by course_name, and return the result.
     """
+    print(f"teachers = {search_request.teachers} for course {search_request.course_name}")
     try:
         course = search_request.course_name
         # 使用单例模式的driver
@@ -200,7 +201,7 @@ async def evaluate_test(evaluate_request: EvaluateRequest) -> StreamingResponse:
         media_type="text/plain"
     )
 
-@app.post("/llm/plan_stream_test")
+@app.post("/llm/plan_stream_")
 async def gen_test_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:
 
     print(gen_plan_request)
@@ -220,7 +221,7 @@ async def gen_test_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:
         for item in think:
             yield json.dumps({
                 "type": "reasoning",
-                "state": "thinking",
+                "state": "reasoning",
                 "content": item
             }, ensure_ascii=False) + "\n"
             await asyncio.sleep(0.5)

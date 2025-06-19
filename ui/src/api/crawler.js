@@ -12,11 +12,12 @@ export const loginTreehole = async () => {
 }
 
 // 搜索课程评价
-export const searchTreehole = async (courseName, num_search = 3) => {
+export const searchTreehole = async (courseName, num_search = 3, teacherCodes = []) => {
     try {
       const response = await axios.post(`${BASE_URL}/crawler/search_courses`, {
         course_name: courseName,
-        max_len: num_search  // 可以根据需要调整
+        max_len: num_search,  // 可以根据需要调整
+        teachers: teacherCodes // 添加教师代码列表参数
       });
       return response.data;
     } catch (error) {

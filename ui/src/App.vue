@@ -2,13 +2,12 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Check } from '@element-plus/icons-vue'
-import axios from 'axios'
 import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan, genPlanStream } from '@/api/course'
 import { getConfig, saveConfig } from '@/api/config'
 import { loginTreehole, searchTreehole } from '@/api/crawler'
 import { generateTableData } from '@/api/timetable'
 import { savePreference } from '@/utils/configService'
-import { formatTeacherName } from '@/utils/teacherFormatter'
+import { formatTeacherName, extractTeacherCodes } from '@/utils/teacherFormatter'
 
 // 配置信息
 const formData = reactive({
@@ -385,16 +384,16 @@ const handleCourseEvaluation = async () => {
 
     // 创建一个队列来存储待处理的课程
     const courseQueue = [...courses.value]
-    let isSearching = false
+    let isSearching = false    // 处理树洞搜索的函数
 
-    // 处理树洞搜索的函数
-    const processSearch = async (course) => {
+    const processSearch = async (course) => {      
       try {
         // 更新状态为搜索中
         courseEvaluationStatus.value[course.name] = EvaluationStatus.SEARCHING
         
-        // 搜索树洞评价
-        const rawText = await searchTreehole(course.name, formData.num_search)
+        // 提取教师代码 - 传入整个课程对象
+        const teacherCodes = extractTeacherCodes(course)
+        const rawText = await searchTreehole(course.name, formData.num_search, teacherCodes)
         
         // 更新状态为评价中
         courseEvaluationStatus.value[course.name] = EvaluationStatus.EVALUATING
@@ -416,21 +415,19 @@ const handleCourseEvaluation = async () => {
     // 处理大模型评价的函数
     const processEvaluation = async (course, rawText) => {
       try {
-        // 初始化评价内容
+        
         courseEvaluationContent.value[course.name] = ''
-          // 获取大模型评价（流式）
         await getCourseEvaluation(
           course.name,
           rawText,
           courses.value.find(c => c.name === course.name)?.classes?.map(cls => cls.teacher) || [],
-          formData.evaluateModelName, // 传递评价模型名称
+          formData.evaluateModelName,
           (chunk) => {
             // 更新评价内容
             courseEvaluationContent.value[course.name] += chunk
           }
         )
         
-        // 更新状态为已完成
         courseEvaluationStatus.value[course.name] = EvaluationStatus.COMPLETED
 
         // 检查是否所有课程都已完成评价
