@@ -176,7 +176,7 @@ async def treehole_search(search_request: TreeholeSearchRequest) -> str:
             for teacher in teachers:
                 html_content += f"<h2>教师：{teacher}</h2>"
                 html_content = await asyncio.to_thread(
-                    search_treehole, course, teacher,html_content, search_request.max_len, 1, 0.5
+                    search_treehole, course, teacher, html_content, search_request.max_len, 1, 0.5
                 )
 
         html_content += "</body></html>"
