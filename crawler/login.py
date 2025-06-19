@@ -15,8 +15,8 @@ def get_config():
 
 def is_logged_in(driver):
     try:
-        # driver.get("about:blank")
-        # time.sleep(0.5)
+        driver.get("about:blank")
+        time.sleep(0.5)
         driver.get("https://treehole.pku.edu.cn/")
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.XPATH, '//*[@id="eagleMapContainer"]/div[1]/div[2]/div/p/span'))
