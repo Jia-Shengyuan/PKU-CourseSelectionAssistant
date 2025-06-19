@@ -156,19 +156,36 @@ async def treehole_close() -> None:
 @app.post("/crawler/search_courses")
 async def treehole_search(search_request: TreeholeSearchRequest) -> str:
     """
-    Search treehole by course_name, and return the result.
+    Search treehole by course_name, and return the result, including all specified teachers.
     """
     print(f"teachers = {search_request.teachers} for course {search_request.course_name}")
     try:
         course = search_request.course_name
-        # 使用单例模式的driver
-        # driver = TreeholeDriver.get_instance() # 假设你已经实现了单例(singleton)模式
+        teachers = search_request.teachers
         html_content = f"<html><body><h1>{course}</h1>"
-        result = await asyncio.to_thread(search_treehole, course, html_content, search_request.max_len, 1, 0.5)
-        return result
+        print("teachers qwq")
+        for element in teachers:
+            print(element)
+        if not teachers:
+            # 没提供老师列表，只按课程搜索一次
+            html_content = await asyncio.to_thread(
+                search_treehole, course, html_content, search_request.max_len, 1, 0.5
+            )
+        else:
+            # 对每个老师分别搜索一次
+            for teacher in teachers:
+                html_content += f"<h2>教师：{teacher}</h2>"
+                html_content = await asyncio.to_thread(
+                    search_treehole, course, teacher,html_content, search_request.max_len, 1, 0.5
+                )
+
+        html_content += "</body></html>"
+        return html_content
+
     except Exception as e:
         print(f"搜索课程评价失败: {e}")
         raise
+
 
 @app.post("/llm/evaluate_test")
 async def evaluate(evaluate_request: EvaluateRequest) -> StreamingResponse:
