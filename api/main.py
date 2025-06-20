@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,6 +6,7 @@ from pydantic import BaseModel
 import asyncio
 import json
 import os
+import shutil
 from datetime import datetime
 from api.models.course import Course, CourseSearchRequest, FetchCourseByPlanRequest
 from api.models.chat import EvaluateRequest, GenPlanRequest, TreeholeSearchRequest
@@ -98,6 +99,34 @@ async def get_course_info(course_request: CourseSearchRequest) -> List[Course]:
     print("Get course request : " + str(course_request))
 
     return get_course_info_(course_request)
+
+@app.post("/course/upload_plan_pdf")
+async def set_plan_pdf(file: UploadFile = File(...)) -> dict:
+    """
+    Upload plan pdf file and save it to config/plan.pdf
+    """
+    try:
+        # 验证文件类型
+        if not file.filename.endswith('.pdf'):
+            raise HTTPException(status_code=400, detail="只接受PDF文件")
+            
+        # 确保目录存在
+        os.makedirs("config", exist_ok=True)
+        file_path = "config/plan.pdf"
+        
+        # 删除已存在的文件（如果有）
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            
+        # 保存上传的文件 - 使用完整读取再写入的方式
+        with open(file_path, "wb") as buffer:
+            contents = await file.read()
+            buffer.write(contents)
+            
+        return {"success": True, "message": "培养方案PDF上传成功"}
+    except Exception as e:
+        print(f"上传培养方案PDF失败: {e}")
+        raise HTTPException(status_code=500, detail=f"上传培养方案PDF失败: {str(e)}")
 
 @app.post("/course/plan_pdf")
 async def read_pdf_plan() -> str:

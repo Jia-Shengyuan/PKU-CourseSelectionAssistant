@@ -1,8 +1,8 @@
 <script setup>
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Loading, Check } from '@element-plus/icons-vue'
-import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan, genPlanStream } from '@/api/course'
+import { Loading, Check, Upload } from '@element-plus/icons-vue'
+import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan, genPlanStream, uploadPlanPdf } from '@/api/course'
 import { getConfig, saveConfig } from '@/api/config'
 import { loginTreehole, searchTreehole } from '@/api/crawler'
 import { generateTableData } from '@/api/timetable'
@@ -703,6 +703,30 @@ const deleteAllCourses = () => {
   })
 }
 
+// 处理培养方案PDF上传
+const handlePlanPdfUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  // 验证文件类型
+  if (file.type !== 'application/pdf') {
+    ElMessage.error('请选择PDF格式的文件')
+    return
+  }
+  
+  try {
+    ElMessage.info('正在上传培养方案PDF...')
+    const result = await uploadPlanPdf(file)
+    ElMessage.success('培养方案PDF上传成功，您可以点击"导入培养方案课程"按钮导入课程')
+  } catch (error) {
+    console.error('上传培养方案PDF失败:', error)
+    ElMessage.error('上传培养方案PDF失败，请重试')
+  }
+  
+  // 重置文件输入以允许重新选择同一文件
+  event.target.value = ''
+}
+
 onMounted(async () => {
   await loadConfig()
 })
@@ -728,15 +752,34 @@ onMounted(async () => {
             <el-form-item label="年级">
               <el-input v-model="formData.grade" placeholder="请输入年级（如大一下）" />
             </el-form-item>
-          </el-col>
-          <el-col :span="8">
+          </el-col>          <el-col :span="8">
             <el-form-item label="当前学期">
               <el-input v-model="formData.semester" placeholder="请输入当前学期（如2024-2025-2）" />
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item>
-              <el-button type="primary" @click="handleSetSemester">设定学期</el-button>
+              <div style="display: flex; gap: 10px;">
+                <el-button type="primary" @click="handleSetSemester">设定学期</el-button>
+                
+                <!-- 隐藏的文件输入框 -->
+                <input
+                  type="file"
+                  ref="pdfFileInput"
+                  accept=".pdf"
+                  style="display: none;"
+                  @change="handlePlanPdfUpload"
+                />
+                
+                <!-- 导入培养方案按钮 -->
+                <el-button 
+                  type="success" 
+                  @click="$refs.pdfFileInput.click()"
+                  :icon="Upload"
+                >
+                  导入培养方案
+                </el-button>
+              </div>
             </el-form-item>
           </el-col>
         </el-row>
@@ -865,7 +908,7 @@ onMounted(async () => {
           <span>课程列表</span>
           <div class="button-group">
             <el-button type="danger" @click="deleteAllCourses" :disabled="isLoadingConfig">删除所有课程</el-button>
-            <el-button type="success" @click="handleFileImport" :disabled="isLoadingConfig">导入培养方案</el-button>
+            <el-button type="success" @click="handleFileImport" :disabled="isLoadingConfig">导入培养方案课程</el-button>
             <el-button type="primary" @click="showAddCourseDialog" :disabled="isLoadingConfig">手动添加课程</el-button>
           </div>
         </div>

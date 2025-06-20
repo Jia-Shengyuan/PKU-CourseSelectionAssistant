@@ -222,3 +222,31 @@ export const genPlanStream = async (requestData, onReasoningChunk, onResult, mod
         throw error
     }
 }
+
+/**
+ * 上传培养方案PDF文件
+ * @param {File} file - 要上传的PDF文件
+ * @returns {Promise<Object>} 上传结果
+ */
+export const uploadPlanPdf = async (file) => {
+  try {
+    // 创建FormData对象
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await axios.post(
+      `${BASE_URL}/course/upload_plan_pdf`, 
+      formData, 
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error('上传培养方案PDF失败:', error);
+    throw error;
+  }
+};
