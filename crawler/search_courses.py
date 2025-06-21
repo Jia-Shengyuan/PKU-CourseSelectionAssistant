@@ -36,15 +36,20 @@ def getshort(course_name):
             flag=0
     return ans.strip()
 
-def search_treehole(course_name: str, teachers: List[str],html_content: str, max_len: int = 5, sleep_after_search: float = 1, sleep_between_scroll: float = 0.3, save_results: bool = True, acceppt_saved_results: bool = True) -> str:
+def search_treehole(course_name: str, teachers: List[str],html_content: str, max_len: int = 5, sleep_after_search: float = 1, sleep_between_scroll: float = 0.3, save_results: bool = True, acceppt_saved_results: bool = True,min_len_limit=1000) -> str:
     
     # If accpect saved results, and the corresponding file exists, then just return without searching again.
     if acceppt_saved_results:
         filename = f"{to_safe_filename(course_name)}.html"
-        if os.path.exists(os.path.join(data_folder_path, filename)):
-            with open(os.path.join(data_folder_path, filename), "r", encoding="utf-8") as f:
+        filepath = os.path.join(data_folder_path, filename)
+        if os.path.exists(filepath):
+            with open(filepath, "r", encoding="utf-8") as f:
                 html_content = f.read()
-            return html_content
+            if len(html_content.strip()) >= min_len_limit:
+                return html_content
+            else:
+                print(f"缓存文件 {filename} 长度过短（{len(html_content)}），重新搜索中…")
+                html_content=f"<html><body><h1>{course_name}</h1>"
 
     driver = TreeholeDriver.get_instance()
     course_name_short = getshort(course_name)
