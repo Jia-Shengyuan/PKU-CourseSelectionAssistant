@@ -36,15 +36,15 @@ def getshort(course_name):
             flag=0
     return ans.strip()
 
-def search_treehole(course_name: str, teacher: str,html_content: str, max_len: int = 5, sleep_after_search: float = 1, sleep_between_scroll: float = 0.3, save_results: bool = True, acceppt_saved_resuults: bool = True) -> str:
+def search_treehole(course_name: str, teacher: str,html_content: str, max_len: int = 5, sleep_after_search: float = 1, sleep_between_scroll: float = 0.3, save_results: bool = True, acceppt_saved_results: bool = True) -> str:
     
     # If accpect saved results, and the corresponding file exists, then just return without searching again.
-    # if acceppt_saved_resuults:
-    #     filename = f"{to_safe_filename(course_name)}.html"
-    #     if os.path.exists(os.path.join(data_folder_path, filename)):
-    #         with open(os.path.join(data_folder_path, filename), "r", encoding="utf-8") as f:
-    #             html_content = f.read()
-    #         return html_content
+    if acceppt_saved_results:
+        filename = f"{to_safe_filename(course_name)}.html"
+        if os.path.exists(os.path.join(data_folder_path, filename)):
+            with open(os.path.join(data_folder_path, filename), "r", encoding="utf-8") as f:
+                html_content = f.read()
+            return html_content
 
     driver = TreeholeDriver.get_instance()
     course_name_short = getshort(course_name)

@@ -112,7 +112,7 @@ export const activateDatabase = async (semester) => {
 // 获取课程评价
 export const getCourseEvaluation = async (courseName, rawText, choices, modelName, onChunk) => {
   try {
-    const response = await fetch(`${BASE_URL}/llm/evaluate_test`, {
+    const response = await fetch(`${BASE_URL}/llm/evaluate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -159,6 +159,16 @@ export const genPlan = async (requestData) => {
         return response.data
     } catch (error) {
         console.error('生成选课方案失败:', error)
+        throw error
+    }
+}
+
+export const hasPlan = async() => {
+    try {
+        const response = await axios.get(`${BASE_URL}/course/has_plan_pdf`)
+        return response.data
+    } catch (error) {
+        console.error('检查是否有选课方案失败:', error)
         throw error
     }
 }

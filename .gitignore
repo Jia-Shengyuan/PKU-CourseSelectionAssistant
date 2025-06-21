@@ -14,13 +14,12 @@
 api_key.txt
 config.json
 
-
 crawler/data/
 config/chrome_data/
 config/plan.pdf
 
-# 忽略 config/api_key.txt 文件（必须手动更新；手动更新时不保留api key）
-# config/api_key.txt
+# 忽略生成的课程评价
+selevaluator/data/
 
-# 忽略 config/config.json 文件（必须手动更新；手动更新时不保留api key）
-# config/config.json
+# 忽略生成的课表
+output/

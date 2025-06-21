@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Check, Upload } from '@element-plus/icons-vue'
-import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan, genPlanStream, uploadPlanPdf } from '@/api/course'
+import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan, genPlanStream, uploadPlanPdf, hasPlan } from '@/api/course'
 import { getConfig, saveConfig } from '@/api/config'
 import { loginTreehole, searchTreehole } from '@/api/crawler'
 import { generateTableData } from '@/api/timetable'
@@ -331,7 +331,8 @@ const EvaluationStatus = {
   QUEUED: '队列中',
   SEARCHING: '搜索中',
   EVALUATING: '评价中',
-  COMPLETED: '已完成'
+  COMPLETED: '已完成',
+  ERROR: '错误'  // 添加错误状态
 }
 
 const timetables = ref([]) // 存储所有课表
@@ -423,12 +424,19 @@ const handleCourseEvaluation = async () => {
           courses.value.find(c => c.name === course.name)?.classes?.map(cls => cls.teacher) || [],
           formData.evaluateModelName,
           (chunk) => {
-            // 更新评价内容
+            if (chunk.startsWith('[ERROR]')) {
+              console.error(`评价课程 ${course.name} 失败:`, chunk)
+              chunk = chunk.replace('[ERROR]', '').trim()
+              courseEvaluationStatus.value[course.name] = EvaluationStatus.ERROR
+              ElMessage.error(`评价课程 ${course.name} 失败`)
+            }
             courseEvaluationContent.value[course.name] += chunk
           }
         )
         
-        courseEvaluationStatus.value[course.name] = EvaluationStatus.COMPLETED
+        if (courseEvaluationStatus.value[course.name] != EvaluationStatus.ERROR) {
+          courseEvaluationStatus.value[course.name] = EvaluationStatus.COMPLETED
+        }
 
         // 检查是否所有课程都已完成评价
         const allCompleted = courses.value.every(
@@ -440,7 +448,9 @@ const handleCourseEvaluation = async () => {
           await generateTimetables()
         }
       } catch (error) {
-        console.error(`评价课程 ${course.name} 失败:`, error)
+        console.error(`(catch)评价课程 ${course.name} 失败:`, error)
+        courseEvaluationStatus.value[course.name] = EvaluationStatus.ERROR
+        courseEvaluationContent.value[course.name] = `获取评价失败: ${error.message || error}`
         ElMessage.error(`评价课程 ${course.name} 失败`)
       }
     }
@@ -520,6 +530,7 @@ const generateTimetables = async () => {
     }
 
     console.log('发送的请求数据:', requestData)
+
     await genPlanStream(
       requestData,
       // 推理过程回调
@@ -530,6 +541,17 @@ const generateTimetables = async () => {
           reasoningContent.value += `\n\n[重试] ${reasoningChunk.content}\n`
         } else if (reasoningChunk.state === 'error') {
           reasoningContent.value += `\n\n[错误] ${reasoningChunk.content}\n`
+          isReasoning.value = false
+          isGeneratingTimetable.value = false
+          ElMessageBox.alert(
+            `生成课表过程中发生错误：${reasoningChunk.content}`,
+            '错误',
+            {
+              confirmButtonText: '确定',
+              type: 'error',
+            }
+          )
+          return // 提前终止回调处理
         }
         
         // 自动滚动到推理内容底部
@@ -567,11 +589,24 @@ const generateTimetables = async () => {
   }
 }
 
-// 处理文件导入
-const handleFileImport = async () => {
+// 导入培养方案课程
+const handlePlanCourseImport = async () => {
 
   if(!isDatabaseActivated.value) {
     ElMessage.warning('请先设置学期，并激活数据库')
+    return
+  }
+
+  // 检查是否存在培养方案PDF文件
+  try {
+    const planExists = await hasPlan()
+    if (!planExists) {
+      ElMessage.warning('未找到培养方案PDF文件，请先上传培养方案')
+      return
+    }
+  } catch (error) {
+    console.error('检查培养方案文件失败:', error)
+    ElMessage.error('检查培养方案文件失败')
     return
   }
 
@@ -908,7 +943,7 @@ onMounted(async () => {
           <span>课程列表</span>
           <div class="button-group">
             <el-button type="danger" @click="deleteAllCourses" :disabled="isLoadingConfig">删除所有课程</el-button>
-            <el-button type="success" @click="handleFileImport" :disabled="isLoadingConfig">导入培养方案课程</el-button>
+            <el-button type="success" @click="handlePlanCourseImport" :disabled="isLoadingConfig">导入培养方案课程</el-button>
             <el-button type="primary" @click="showAddCourseDialog" :disabled="isLoadingConfig">手动添加课程</el-button>
           </div>
         </div>

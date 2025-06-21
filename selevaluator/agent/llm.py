@@ -89,7 +89,7 @@ class LLM(BaseLLM):
             return LLM_Response(state = "error", content = "Invalid API key")
         except Exception as e:
             self.logger.log_error(e)
-            return LLM_Response(state = "error", content = "Unable to chat with LLM")
+            return LLM_Response(state = "error", content = "Unable to chat with LLM, " + e)
             # return "Error: Unable to chat with LLM"
                 
 
@@ -132,7 +132,7 @@ class AsyncLLM(BaseLLM):
             yield LLM_Response(state = "error", content = "Error: Invalid API key")
         except Exception as e:
             self.logger.log_error(e)
-            yield LLM_Response(state = "error", content = "Error: Unable to chat with LLM")
+            yield LLM_Response(state = "error", content = "Error: Unable to chat with LLM, " + e)
             # yield "Error: Unable to chat with LLM"
 
 class AgentLLM(AsyncLLM):
@@ -158,9 +158,6 @@ class AgentLLM(AsyncLLM):
                 yield chunk
             return
 
-        # is_streaming = self.settings.stream
-        # self.settings.stream = False  # Disable streaming for error checking
-
         response_text = ""
         async for chunk in super().chat(messages):
             if chunk.state == "reasoning":
@@ -177,7 +174,7 @@ class AgentLLM(AsyncLLM):
                 self.logger.log_info(f"大模型的原始回复为：{response_text}")
                 self.logger.log_info("正在重新请求大模型...")
 
-                yield LLM_Response(state="retrying", content="检测到错误，正在重新请求大模型...")
+                yield LLM_Response(state="retrying", content="检测到输出内容不正确，正在重新请求大模型...")
 
                 error_prompt = "请注意，你刚才的回复中，存在错误（不符合约定格式）的信息。请根据以下错误提示重新回答问题：\n" + "\n".join(errors) + "\n注意：你的新的回答需要符合约定格式，且不包含任何错误，不包含除json回复外的任何信息，确保你的回复能被json.loads()直接解析。同时，确保你将重点放在解决错误上，而不是其他地方。例如，如果你的错误是输出无法直接被json.loads()函数解析，那么你不应该去花时间纠结是否要修改具体内容。"
                     

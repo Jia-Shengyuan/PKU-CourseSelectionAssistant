@@ -17,7 +17,7 @@ class RawComment:
 3. 本学期开课的老师列表
 
 根据这些信息，你需要先总体简单介绍一下这门课程，然后再按老师风评从优到劣的顺序对老师进行排序，并给出对每位老师的具体评价。
-课程及老师的介绍可以从给分好坏，任务量，课程难度，教学质量，以及其他你认为重要的方面进行。最终的评价需要尽简短，但也不能丢失任何有用的细节。
+课程及老师的介绍可以从给分好坏，任务量，课程难度，教学质量，以及其他你认为重要的方面进行。最终的评价需要简短，但也不能丢失任何有用的细节。
 
 需要注意：
 1. 由于原始评价通过网络平台直接搜索获取，其中可能会包含网络用语（如通过姓名拼音首字母代指某老师），你需要注意识别。
@@ -81,8 +81,9 @@ class Evaluator:
             content = str()
             with open(file_path, 'r', encoding='utf-8') as file:
                 content = file.read()
-            yield content
-            return
+            if content and content.strip():
+                yield content
+                return
         
         logger = Logger()
         settings = LLM_Settings(model_name=self.model_name)
@@ -102,6 +103,10 @@ class Evaluator:
 
                 if self.display_while_running:
                     logger.log(token, end="")  # 实时打印
+
+                if token.state == "error":
+                    yield f"[ERROR] {token.content}"
+                    return
                 
                 # Evaluation only returns the final result
                 if token.state == "answering":
@@ -114,13 +119,14 @@ class Evaluator:
 
         except Exception as e:
             logger.log_error(e)
-            raise  # 重新抛出异常
+            yield f"[ERROR] 发生错误：{e}"
+            return
 
-        logger.log_info("\nResult:")
-        logger.log(Markdown(full_response))
+        # logger.log_info("\nResult:")
+        # logger.log(Markdown(full_response))
         file_path = Path("selevaluator/data") / f"{self.course.course_name}.txt"  # 自动处理路径分隔符
         with open(file_path, 'w', encoding='utf-8') as file:
-            if (len(full_response) > 100):
-                file.write(full_response)
+            # if (len(full_response) > 100):
+            file.write(full_response)
         return
 

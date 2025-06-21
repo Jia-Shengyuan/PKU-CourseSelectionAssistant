@@ -38,6 +38,11 @@
   color: white;
 }
 
+.status-badge.错误 {
+  background-color: #f56c6c;
+  color: white;
+}
+
 .evaluation-text {
   white-space: pre-wrap;
   line-height: 1.6;

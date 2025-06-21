@@ -127,6 +127,13 @@ async def set_plan_pdf(file: UploadFile = File(...)) -> dict:
     except Exception as e:
         print(f"上传培养方案PDF失败: {e}")
         raise HTTPException(status_code=500, detail=f"上传培养方案PDF失败: {str(e)}")
+    
+@app.get("/course/has_plan_pdf")
+async def has_plan_pdf() -> bool:
+    """
+    Check if the plan pdf exists.
+    """
+    return os.path.exists("config/plan.pdf")
 
 @app.post("/course/plan_pdf")
 async def read_pdf_plan() -> str:
@@ -153,7 +160,6 @@ async def treehole_login() -> None:
     """
     print("Logging in to treehole...")
     try:
-        # 假设你已经实现了单例(singleton)模式，后续代码可以通过static的方法get_instance()获取driver
         driver = TreeholeDriver()
         driver.login()
     except Exception as e:
@@ -216,7 +222,7 @@ async def treehole_search(search_request: TreeholeSearchRequest) -> str:
         raise
 
 
-@app.post("/llm/evaluate_test")
+@app.post("/llm/evaluate")
 async def evaluate(evaluate_request: EvaluateRequest) -> StreamingResponse:
     """
     Evaluate the course by class_name and raw_text.
@@ -227,7 +233,7 @@ async def evaluate(evaluate_request: EvaluateRequest) -> StreamingResponse:
         media_type="text/plain"
     )
 
-@app.post("/llm/evaluate")
+@app.post("/llm/evaluate_test")
 async def evaluate_test(evaluate_request: EvaluateRequest) -> StreamingResponse:
     """
     模拟流式输出，将输入的raw_text按行分割并逐行返回
@@ -258,12 +264,12 @@ async def gen_test_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:
             Course(name="高等代数II", class_id=2, course_id="2", time="all,2,3-4;all,5,1-2;", teacher="wfz", credit=4)
         ],
         [
-            Course(name="恨基础", class_id=3, course_id="3", time="all,1,5-6;odd,4,7-8;", teacher="dh", credit=3)
+            Course(name="爱基础", class_id=3, course_id="3", time="all,1,5-6;odd,4,7-8;", teacher="dh", credit=3)
         ]
     ]
     
     async def gen_fake_result():
-        think = ["这是一个模拟的思考过程", "我将输出测试用的假课表"]
+        think = ["这是一个模拟的思考过程\n", "我将输出测试用的假课表"]
         for item in think:
             yield json.dumps({
                 "type": "reasoning",
@@ -296,6 +302,15 @@ async def gen_plan_stream(gen_plan_request: GenPlanRequest) -> StreamingResponse
     async def generate_plans():
         async for item in generate_single_plan(gen_plan_request, display=True):
             if isinstance(item, LLM_Response):
+
+                # If error, return error message to user
+                if item.state == "error":
+                    yield json.dumps({
+                        "type": "error",
+                        "message": item.content
+                    }, ensure_ascii=False) + "\n"
+                    return
+                
                 # 推理过程中的chunk，返回JSON格式
                 yield json.dumps({
                     "type": "reasoning",
