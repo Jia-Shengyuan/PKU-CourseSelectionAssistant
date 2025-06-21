@@ -14,12 +14,16 @@
 api_key.txt
 config.json
 
-crawler/data/
+# 忽略crawler/data文件夹下的所有文件，但保留文件夹
+crawler/data/*
+!crawler/data/.gitkeep
+
 config/chrome_data/
 config/plan.pdf
 
-# 忽略生成的课程评价
-selevaluator/data/
+# 忽略selevaluator/data文件夹下的所有文件，但保留文件夹
+selevaluator/data/*
+!selevaluator/data/.gitkeep
 
 # 忽略生成的课表
 output/
