@@ -8,6 +8,7 @@ import { loginTreehole, searchTreehole } from '@/api/crawler'
 import { generateTableData } from '@/api/timetable'
 import { savePreference } from '@/utils/configService'
 import { formatTeacherName, extractTeacherCodes } from '@/utils/teacherFormatter'
+import { formatCourseInfoToClass, parseClassId } from '@/utils/courseFormatter'
 
 // 配置信息
 const formData = reactive({
@@ -136,9 +137,15 @@ const addCourse = async () => {
   if (!isDatabaseActivated.value) {
     ElMessage.warning('请先设置学期，并激活数据库')
     return
-  }
+  }  
   if (!newCourse.name) {
     ElMessage.warning('请输入课程名称')
+    return
+  }
+
+  // 验证课程ID格式
+  if (newCourse.class_id && parseClassId(newCourse.class_id) === null) {
+    ElMessage.warning('班级编号必须是数字')
     return
   }
 
@@ -149,10 +156,9 @@ const addCourse = async () => {
   }
 
   try {
-    
     const courseData = await fetchCourse(
       newCourse.name,
-      newCourse.class_id ? parseInt(newCourse.class_id) : null,
+      parseClassId(newCourse.class_id),
       newCourse.teacher || null,
       newCourse.accept_advanced_class,
       newCourse.fuzzy_matching
@@ -168,13 +174,7 @@ const addCourse = async () => {
     courseData.forEach(course => {
       if (!courseMap.has(course.name)) {
         courseMap.set(course.name, []);
-      }
-      courseMap.get(course.name).push({
-        id: course.class_id.toString(),
-        teacher: course.teacher,
-        time: course.time,
-        location: course.location
-      });
+      }        courseMap.get(course.name).push(formatCourseInfoToClass(course));
     });
     // 将每个课程名都添加到 courses.value
     for (const [name, classes] of courseMap.entries()) {
@@ -220,11 +220,17 @@ const addClass = (courseIndex) => {
 const confirmAddClass = async () => {
   const course = courses.value[addingCourseIndex.value]
   
+  // 验证课程ID格式
+  if (newClass.class_id && parseClassId(newClass.class_id) === null) {
+    ElMessage.warning('班级编号必须是数字')
+    return
+  }
+  
+  // 从API获取课程信息
   try {
-    // 从API获取课程信息
     const courseData = await fetchCourse(
       course.name,
-      newClass.class_id ? parseInt(newClass.class_id) : null,
+      parseClassId(newClass.class_id),
       newClass.teacher || null,
       false,
       false
@@ -245,15 +251,8 @@ const confirmAddClass = async () => {
     if (newClasses.length === 0) {
       ElMessage.warning('所有匹配的班级都已存在')
       return
-    }
-
-    // 添加新班级
-    course.classes.push(...newClasses.map(courseInfo => ({
-      id: courseInfo.class_id.toString(),
-      teacher: courseInfo.teacher,
-      time: courseInfo.time,
-      location: courseInfo.location
-    })))
+    }      // 添加新班级
+    course.classes.push(...newClasses.map(formatCourseInfoToClass))
 
     // 自动展开该课程
     if (!activeNames.value.includes(addingCourseIndex.value)) {

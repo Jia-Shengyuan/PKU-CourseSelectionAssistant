@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { BASE_URL } from '@/utils'
+import { formatCourseInfoToClass } from '@/utils/courseFormatter'
 
 /**
  * 获取所有满足筛选条件的课程信息
@@ -80,16 +81,7 @@ export const courseDataToMapArray = (courseData) => {
                 name: course.name,
                 classes: []
             })
-        }
-        courseMap.get(course.name).classes.push({
-            id: course.class_id.toString(),
-            teacher: course.teacher,
-            time: course.time,
-            location: course.location,
-            course_id: course.course_id,
-            note: course.note,
-            credit: course.credit
-        })
+        }        courseMap.get(course.name).classes.push(formatCourseInfoToClass(course))
     })
 
     return Array.from(courseMap.values())
