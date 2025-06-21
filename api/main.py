@@ -198,22 +198,12 @@ async def treehole_search(search_request: TreeholeSearchRequest) -> str:
         course = search_request.course_name
         teachers = search_request.teachers
         html_content = f"<html><body><h1>{course}</h1>"
-        print("teachers qwq")
+        print("teachers：")
         for element in teachers:
             print(element)
-        if not teachers:
-            # 没提供老师列表，只按课程搜索一次
-            html_content = await asyncio.to_thread(
-                search_treehole, course, html_content, search_request.max_len, 1, 0.5
-            )
-        else:
-            # 对每个老师分别搜索一次
-            for teacher in teachers:
-                html_content += f"<h2>教师：{teacher}</h2>"
-                html_content = await asyncio.to_thread(
-                    search_treehole, course, teacher, html_content, search_request.max_len, 1, 0.5
-                )
-
+        html_content = await asyncio.to_thread(
+            search_treehole, course, teachers, html_content, search_request.max_len, 1, 0.5
+        )
         html_content += "</body></html>"
         return html_content
 
