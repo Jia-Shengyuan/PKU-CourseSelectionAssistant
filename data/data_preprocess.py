@@ -8,8 +8,8 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.dirname(current_dir)
 sys.path.append(project_root)
 
-from src.agent.llm import AsyncLLM, LLM_Settings
-from src.logger.logger import Logger
+from selevaluator.agent.llm import AsyncLLM, LLM_Settings
+from selevaluator.agent.logger.logger import Logger
 import json
 
 class CourseDataProcessor:
