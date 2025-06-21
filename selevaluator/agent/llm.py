@@ -119,13 +119,10 @@ class AsyncLLM(BaseLLM):
                         yield LLM_Response(state="reasoning", content=chunk.choices[0].delta.reasoning_content)
                     if chunk.choices[0].delta.content is not None:
                         yield LLM_Response(state="answering", content=chunk.choices[0].delta.content)
-                        # yield {"state": "answering", "content": chunk.choices[0].delta.content}
             else:
                 if response.choices[0].message.reasoning_content is not None:
                     yield LLM_Response(state="reasoning", content=response.choices[0].message.reasoning_content)
-                    # yield {"state": "reasoning", "content": response.choices[0].message.reasoning_content}
                 yield LLM_Response(state="answering", content=response.choices[0].message.content)
-                # yield {"state": "answering", "content": response.choices[0].message.content}
 
         except openai.AuthenticationError as e:
             self.logger.log_error(e)
