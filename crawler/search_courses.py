@@ -85,10 +85,10 @@ def search_treehole(course_name: str, teachers: List[str],html_content: str, max
                         EC.presence_of_element_located((By.XPATH, '//*[@id="detail-scroll detail-scroll2"]/div'))
                     )
 
-                    dz_only = WebDriverWait(driver, 2).until(
-                        EC.presence_of_element_located((By.XPATH, '//*[@id="detail-scroll detail-scroll2"]/div/div[3]/div[1]/div/span[1]/span'))
-                    )
-                    dz_only.click()
+                    # dz_only = WebDriverWait(driver, 2).until(
+                    #     EC.presence_of_element_located((By.XPATH, '//*[@id="detail-scroll detail-scroll2"]/div/div[3]/div[1]/div/span[1]/span'))
+                    # )
+                    # dz_only.click()
 
                     comment_section = driver.find_element(By.XPATH, '//*[@id="detail-scroll detail-scroll2"]')
                     last_height = driver.execute_script("return arguments[0].scrollHeight", comment_section)
