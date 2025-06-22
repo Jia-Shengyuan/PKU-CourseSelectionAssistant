@@ -71,6 +71,7 @@ class Evaluator:
         teachers = ', '.join(sorted({t for t in request.choices if t}))
         self.course = RawComment(course_name = request.course_name, teachers = teachers, comment = request.raw_text)
         self.display_while_running = display_while_running
+        self.model = request.model
         self.model_name = model_name
 
     async def evaluate(self):
@@ -86,7 +87,7 @@ class Evaluator:
                 return
         
         logger = Logger()
-        settings = LLM_Settings(model_name=self.model_name)
+        settings = LLM_Settings(model_name=self.model.name, temperature=self.model.temperature, top_p=self.model.top_p, model_type="evaluate")
         llm = AsyncLLM(settings, logger)
 
         messages = self.course.messages

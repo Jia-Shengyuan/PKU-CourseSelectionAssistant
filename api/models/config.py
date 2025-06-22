@@ -8,3 +8,8 @@ class ConfigData(BaseModel):
     user: Dict[str, Any]
     course: Dict[str, Any]
     crawler: Dict[str, Any]
+
+class ModelConfig(BaseModel):
+    name: str
+    temperature: float
+    top_p: float

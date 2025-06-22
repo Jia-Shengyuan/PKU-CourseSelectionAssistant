@@ -243,7 +243,7 @@ async def evaluate_test(evaluate_request: EvaluateRequest) -> StreamingResponse:
         media_type="text/plain"
     )
 
-@app.post("/llm/plan_stream")
+@app.post("/llm/plan_stream_")
 async def gen_test_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:
 
     print(gen_plan_request)
@@ -283,7 +283,7 @@ async def gen_test_plan(gen_plan_request: GenPlanRequest) -> StreamingResponse:
         media_type="application/x-ndjson"
     )
 
-@app.post("/llm/plan_stream_")
+@app.post("/llm/plan_stream")
 async def gen_plan_stream(gen_plan_request: GenPlanRequest) -> StreamingResponse:
     """
     生成选课方案，使用流式响应返回推理过程和最终结果。

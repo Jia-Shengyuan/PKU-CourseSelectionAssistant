@@ -7,11 +7,19 @@ export const savePreference = async (formData, courses, minCredits, maxCredits, 
       model: {
         base_url: formData.apiProvider,
         model_name: formData.modelName, // 保留旧字段以兼容
-        evaluate_model_name: formData.evaluateModelName,
-        gen_plan_model_name: formData.genPlanModelName,
+        evaluate_model: {
+          name: formData.evaluateModelName,
+          temperature: formData.evaluateModelTemperature,
+          top_p: formData.evaluateModelTopP
+        },
+        gen_plan_model: {
+          name: formData.genPlanModelName,
+          temperature: formData.genPlanModelTemperature,
+          top_p: formData.genPlanModelTopP
+        },
         api_key: formData.apiKey,
-        temperature: formData.temperature,
-        top_p: formData.topP,
+        temperature: formData.temperature, // 兼容性
+        top_p: formData.topP, // 兼容性
         stream: formData.stream
       },
       user: {

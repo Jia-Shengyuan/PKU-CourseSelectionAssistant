@@ -102,7 +102,7 @@ export const activateDatabase = async (semester) => {
 }
 
 // 获取课程评价
-export const getCourseEvaluation = async (courseName, rawText, choices, modelName, onChunk) => {
+export const getCourseEvaluation = async (courseName, rawText, choices, modelConfig, onChunk) => {
   try {
     const response = await fetch(`${BASE_URL}/llm/evaluate`, {
       method: 'POST',
@@ -113,7 +113,8 @@ export const getCourseEvaluation = async (courseName, rawText, choices, modelNam
         course_name: courseName,
         raw_text: rawText,
         choices: choices,
-        model_name: modelName
+        model: modelConfig,
+        model_name: modelConfig.name // 兼容性
       })
     });
 
@@ -170,18 +171,19 @@ export const hasPlan = async() => {
  * @param {Object} requestData - 请求数据
  * @param {Function} onReasoningChunk - 推理过程回调函数
  * @param {Function} onResult - 结果回调函数
- * @param {string} modelName - 模型名称
+ * @param {Object} modelConfig - 模型配置对象
  * @returns {Promise<void>}
  */
-export const genPlanStream = async (requestData, onReasoningChunk, onResult, modelName) => {
+export const genPlanStream = async (requestData, onReasoningChunk, onResult, modelConfig) => {
 
-    console.log('开始流式生成选课方案:', requestData, '模型:', modelName)
+    console.log('开始流式生成选课方案:', requestData, '模型配置:', modelConfig)
 
     try {
-        // 添加模型名称到请求数据中
+        // 添加模型配置到请求数据中
         const requestWithModel = {
             ...requestData,
-            model_name: modelName
+            model: modelConfig,
+            model_name: modelConfig.name // 兼容性
         }
         
         const response = await fetch(`${BASE_URL}/llm/plan_stream`, {

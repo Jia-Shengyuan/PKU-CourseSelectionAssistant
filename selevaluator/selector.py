@@ -188,7 +188,7 @@ def format_checker(response: str) -> List[str]:
 async def generate_single_plan(data : GenPlanRequest, display : bool = False) -> AsyncGenerator[Union[LLM_Response, List[List[Course]]], None]:
 
     logger = Logger()
-    settings = LLM_Settings(model_name=data.model_name)
+    settings = LLM_Settings(model_name=data.model.name, temperature=data.model.temperature, top_p=data.model.top_p, model_type="gen_plan")
     llm = AgentLLM(settings, logger)
 
     courses = json.dumps([c.model_dump() for c in data.all_classes], ensure_ascii=False)

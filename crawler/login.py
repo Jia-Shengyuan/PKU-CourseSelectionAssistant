@@ -88,14 +88,16 @@ def new_login():
     options.add_argument("--disable-dev-shm-usage")
 
     # 使用webdriver_manager自动管理ChromeDriver版本
-    try:
+    # try:
         # 启动浏览器并尝试访问
-        service = Service(ChromeDriverManager(cache_valid_range=7).install()) 
-    except:
+        # service = Service(ChromeDriverManager(cache_valid_range=7).install()) 
+    # except:
         # 如果失败，可能是因为Chrome更新后webdriver_manager没有及时更新
         # 因此我们不使用缓存重新尝试
-        print("尝试不使用缓存启动ChromeDriver...")
-        service = Service(ChromeDriverManager().install())
+        # print("尝试不使用缓存启动ChromeDriver...")
+    service = Service(ChromeDriverManager().install())
+
+    print("正在启动Chrome浏览器，请稍候...")
 
     try:
         driver = webdriver.Chrome(service=service, options=options)

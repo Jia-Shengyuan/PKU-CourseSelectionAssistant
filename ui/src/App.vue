@@ -20,10 +20,14 @@ const formData = reactive({
   apiProvider: 'https://api.siliconflow.cn/v1/',
   modelName: 'deepseek-ai/DeepSeek-V3', // 将要废除
   evaluateModelName: 'Pro/deepseek-ai/DeepSeek-V3',
+  evaluateModelTemperature: 0.75,
+  evaluateModelTopP: 0.9,
   genPlanModelName: 'Pro/deepseek-ai/DeepSeek-R1',
+  genPlanModelTemperature: 0.7,
+  genPlanModelTopP: 0.95,
   apiKey: '',
-  temperature: 0.7,
-  topP: 0.9,
+  temperature: 0.7, // 保留兼容性
+  topP: 0.9, // 保留兼容性
   stream: true,
   chrome_user_data_dir: 'config/chrome_data',
   num_timetable: 1,
@@ -421,7 +425,11 @@ const handleCourseEvaluation = async () => {
           course.name,
           rawText,
           courses.value.find(c => c.name === course.name)?.classes?.map(cls => cls.teacher) || [],
-          formData.evaluateModelName,
+          {
+            name: formData.evaluateModelName,
+            temperature: formData.evaluateModelTemperature,
+            top_p: formData.evaluateModelTopP
+          },
           (chunk) => {
             if (chunk.startsWith('[ERROR]')) {
               console.error(`评价课程 ${course.name} 失败:`, chunk)
@@ -575,9 +583,13 @@ const generateTimetables = async () => {
           if (timetableElement) {
             timetableElement.scrollIntoView({ behavior: 'smooth' })
           }
-        }, 100)
+        }, 100)      
       },
-      formData.genPlanModelName // 传递生成课表模型名称
+      {
+        name: formData.genPlanModelName,
+        temperature: formData.genPlanModelTemperature,
+        top_p: formData.genPlanModelTopP
+      } // 传递生成课表模型配置
     )
   } catch (error) {
     console.error('生成课表失败:', error)
@@ -664,17 +676,20 @@ const loadConfig = async () => {
   ElMessage.info('正在加载配置...')
   isLoadingConfig.value = true
 
-  try {
-
+  try {    
     const config = await getConfig()
       // 更新表单数据
     formData.apiProvider = config.model.base_url
     formData.modelName = config.model.model_name // 保留旧的以兼容
-    formData.evaluateModelName = config.model.evaluate_model_name || config.model.model_name
-    formData.genPlanModelName = config.model.gen_plan_model_name || config.model.model_name
+    formData.evaluateModelName = config.model.evaluate_model?.name || config.model.model_name
+    formData.evaluateModelTemperature = config.model.evaluate_model?.temperature || 0.75
+    formData.evaluateModelTopP = config.model.evaluate_model?.top_p || 0.9
+    formData.genPlanModelName = config.model.gen_plan_model?.name || config.model.model_name
+    formData.genPlanModelTemperature = config.model.gen_plan_model?.temperature || 0.7
+    formData.genPlanModelTopP = config.model.gen_plan_model?.top_p || 0.95
     formData.apiKey = config.model.api_key
-    formData.temperature = config.model.temperature
-    formData.topP = config.model.top_p
+    formData.temperature = config.model.temperature || formData.evaluateModelTemperature // 兼容性
+    formData.topP = config.model.top_p || formData.evaluateModelTopP // 兼容性
     formData.stream = config.model.stream
     
     formData.studentId = config.user.student_id
@@ -828,8 +843,7 @@ onMounted(async () => {
               />
             </el-form-item>
           </el-col>
-        </el-row>
-        <el-row :gutter="20">
+        </el-row>        <el-row :gutter="20">
           <el-col :span="24">
             <el-divider content-position="left">大模型配置</el-divider>
           </el-col>
@@ -840,17 +854,6 @@ onMounted(async () => {
               <el-input v-model="formData.apiProvider" placeholder="请输入大模型API提供网站链接" />
             </el-form-item>
           </el-col>
-        </el-row>        <el-row :gutter="20">
-          <el-col :span="12">
-            <el-form-item label="汇总评价">
-              <el-input v-model="formData.evaluateModelName" placeholder="请输入评价课程使用的大模型名称" />
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="生成课表">
-              <el-input v-model="formData.genPlanModelName" placeholder="请输入生成课表使用的大模型名称" />
-            </el-form-item>
-          </el-col>
         </el-row>
         <el-row :gutter="20">
           <el-col :span="24">
@@ -859,11 +862,25 @@ onMounted(async () => {
             </el-form-item>
           </el-col>
         </el-row>
+        
+        <!-- 汇总评价模型配置 -->
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-divider content-position="left">汇总评价模型</el-divider>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-form-item label="模型名称">
+              <el-input v-model="formData.evaluateModelName" placeholder="请输入评价课程使用的大模型名称" />
+            </el-form-item>
+          </el-col>
+        </el-row>
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="模型温度">
               <el-slider
-                v-model="formData.temperature"
+                v-model="formData.evaluateModelTemperature"
                 :min="0"
                 :max="1.5"
                 :step="0.01"
@@ -874,7 +891,45 @@ onMounted(async () => {
           <el-col :span="12">
             <el-form-item label="Top P">
               <el-slider
-                v-model="formData.topP"
+                v-model="formData.evaluateModelTopP"
+                :min="0"
+                :max="1"
+                :step="0.01"
+                :format-tooltip="value => value.toFixed(2)"
+              />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        
+        <!-- 生成课表模型配置 -->
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-divider content-position="left">生成课表模型</el-divider>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="24">
+            <el-form-item label="模型名称">
+              <el-input v-model="formData.genPlanModelName" placeholder="请输入生成课表使用的大模型名称" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+        <el-row :gutter="20">
+          <el-col :span="12">
+            <el-form-item label="模型温度">
+              <el-slider
+                v-model="formData.genPlanModelTemperature"
+                :min="0"
+                :max="1.5"
+                :step="0.01"
+                :format-tooltip="value => value.toFixed(2)"
+              />
+            </el-form-item>
+          </el-col>
+          <el-col :span="12">
+            <el-form-item label="Top P">
+              <el-slider
+                v-model="formData.genPlanModelTopP"
                 :min="0"
                 :max="1"
                 :step="0.01"
