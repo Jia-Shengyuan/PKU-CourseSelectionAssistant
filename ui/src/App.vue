@@ -421,6 +421,7 @@ const handleCourseEvaluation = async () => {
       try {
         
         courseEvaluationContent.value[course.name] = ''
+        
         await getCourseEvaluation(
           course.name,
           rawText,

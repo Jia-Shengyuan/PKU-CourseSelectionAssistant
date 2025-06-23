@@ -9,7 +9,7 @@
         },
         "gen_plan_model": {
             "name": "Pro/deepseek-ai/DeepSeek-R1",
-            "temperature": 0.6,
+            "temperature": 0.64,
             "top_p": 0.95
         },
         "api_key": "",
