@@ -1,3 +1,4 @@
 crawler/data/*.html linguist-generated
 data/*.json linguist-generated
-sevaluate/data/*.json linguist-generated
+selevaluate/data/*.json linguist-generated
+sevaluateor/chat_example.py linguist-documentation
