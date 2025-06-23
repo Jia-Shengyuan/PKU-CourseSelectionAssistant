@@ -28,6 +28,10 @@ def get_course_info_(course_request: CourseSearchRequest):
     fuzzy_matching = course_request.fuzzy_matching
     accept_advanced_class = course_request.accept_advanced_class
 
+    name = name.replace("(A级)","")
+    name = name.replace("(B级)","")
+    name = name.replace("(C级)","")
+
     if accept_advanced_class == True and fuzzy_matching == False:
         raise ValueError("Database doesn't support automatically searching for advanced class when fuzzy matching is not allowed.")
         
@@ -48,11 +52,15 @@ def get_course_info_(course_request: CourseSearchRequest):
                           time=dbcourse.time,
                           location=dbcourse.location,
                           note=dbcourse.note)
+        course_eng = dbcourse.name
+        course_eng = course_eng.replace("(A级)",'')
+        course_eng = course_eng.replace("(B级)",'')
+        course_eng = course_eng.replace("(C级)",'')
         course_name = ""
         if fuzzy_matching:
-            course_name = normalize_name(course.name)
+            course_name = normalize_name(course_eng)
         else:
-            course_name = course.name
+            course_name = course_eng
         if course_name == target:
             if (class_id == None or class_id == course.class_id) and (teacher == None or teacher in course.teacher):
                 results.append(course)
@@ -92,9 +100,9 @@ def fetch_course_by_plan_(fetch_request: FetchCourseByPlanRequest):
     return results
 
 if __name__ == "__main__":
-    print(read_pdf_plan_("../config/plan.pdf"))
-    # activate_database_("2024-2025-2")
+    # print(read_pdf_plan_("../config/plan.pdf"))
+    activate_database_("2024-2025-2")
     #print(read_pdf_plan_("./config/plan.pdf"))
-    #print(get_course_info_(CourseSearchRequest(name="网球", fuzzy_matching=True, accept_advanced_class=True)))
+    print(get_course_info_(CourseSearchRequest(name="高级英语口语", fuzzy_matching=True, accept_advanced_class=True)))
     #print(get_courses_by_id(id="132302"))
     # print(fetch_course_by_plan_(FetchCourseByPlanRequest(semester="2024-2025-2", grade="大一", plan_path="./config/plan.pdf", experimental_class=True)))

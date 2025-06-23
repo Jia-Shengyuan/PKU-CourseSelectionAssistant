@@ -17,7 +17,9 @@ def create_course(db: Session, course: CourseCreate):
 
 def get_courses_by_name(db: Session, name: str, fuzzy_matching: bool):
     # 罗马数字 → 阿拉伯数字 对照表
-
+    name = name.replace('(A级)','')
+    name = name.replace('(B级)','')
+    name = name.replace('(C级)','')
     target = ""
     if fuzzy_matching:
         target = normalize_name(name)
@@ -28,11 +30,15 @@ def get_courses_by_name(db: Session, name: str, fuzzy_matching: bool):
     matched_courses = []
 
     for dbcourse in all_courses:
+        course = dbcourse.name
+        course = course.replace('(A级)','')
+        course = course.replace('(B级)','')
+        course = course.replace('(C级)','')
         course_name = ""
         if fuzzy_matching:
-            course_name = normalize_name(dbcourse.name)
+            course_name = normalize_name(course)
         else:
-            course_name = dbcourse.name
+            course_name = course
         if course_name == target:
             course=Course(name=dbcourse.name,
                           course_id=dbcourse.course_id,
