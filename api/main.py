@@ -83,6 +83,10 @@ async def save_config(config: ConfigData):
         print(f"Error saving config: {e}")
         raise
 
+@app.get("db/semesters")
+async def get_available_semesters() -> List[str]:
+    pass
+
 @app.post("/course/activate")
 async def activate_database(semester: str) -> None: # 需要的是形如 "2024-2025-2" 的字符串
     activate_database_(semester)
