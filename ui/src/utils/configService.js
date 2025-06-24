@@ -55,3 +55,41 @@ export const savePreference = async (formData, courses, minCredits, maxCredits, 
     ElMessage.error('保存失败')
   }
 }
+
+/**
+ * 将后端配置映射到前端表单数据
+ * @param {Object} config - 后端配置对象
+ * @param {Object} formData - 前端表单数据对象
+ */
+export const mapConfigToFormData = (config, formData) => {
+  // 模型配置
+  formData.apiProvider = config.model.base_url
+  formData.modelName = config.model.model_name // 保留旧的以兼容
+  formData.evaluateModelName = config.model.evaluate_model?.name || config.model.model_name
+  formData.evaluateModelTemperature = config.model.evaluate_model?.temperature || 0.75
+  formData.evaluateModelTopP = config.model.evaluate_model?.top_p || 0.9
+  formData.genPlanModelName = config.model.gen_plan_model?.name || config.model.model_name
+  formData.genPlanModelTemperature = config.model.gen_plan_model?.temperature || 0.7
+  formData.genPlanModelTopP = config.model.gen_plan_model?.top_p || 0.95
+  formData.apiKey = config.model.api_key
+  formData.temperature = config.model.temperature || formData.evaluateModelTemperature // 兼容性
+  formData.topP = config.model.top_p || formData.evaluateModelTopP // 兼容性
+  formData.stream = config.model.stream
+  
+  // 用户配置
+  formData.studentId = config.user.student_id
+  formData.password = config.user.portal_password
+  formData.grade = config.user.grade
+  formData.semester = config.user.semester
+  formData.userDescription = config.user.introduction
+  formData.chrome_user_data_dir = config.crawler.chrome_user_data_dir
+
+  // 课程配置
+  formData.num_timetable = config.course.num_timetable
+  
+  // 爬虫配置
+  formData.num_search = config.crawler.num_search
+  formData.sleep_after_search = config.crawler.sleep_after_search
+  formData.sleep_between_scroll = config.crawler.sleep_between_scroll
+  formData.sleep_random_range = config.crawler.sleep_random_range
+}

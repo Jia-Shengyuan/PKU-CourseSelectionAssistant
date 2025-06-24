@@ -83,9 +83,29 @@ async def save_config(config: ConfigData):
         print(f"Error saving config: {e}")
         raise
 
-@app.get("db/semesters")
+@app.get("/db/semesters")
 async def get_available_semesters() -> List[str]:
-    pass
+    """
+    获取可用的学期列表，通过扫描db目录下的.db文件
+    """
+    return ["2024-2025-2"]  # Only this semester is available now
+
+    try:
+        db_dir = "db"
+        semesters = []
+        
+        if os.path.exists(db_dir):
+            for filename in os.listdir(db_dir):
+                if filename.endswith('.db'):
+                    semester = filename[:-3]  # 去掉 ".db" 后缀
+                    semesters.append(semester)
+        
+        semesters.sort(reverse=True)
+        
+        return semesters
+    except Exception as e:
+        print(f"获取可用学期失败: {e}")
+        return []
 
 @app.post("/course/activate")
 async def activate_database(semester: str) -> None: # 需要的是形如 "2024-2025-2" 的字符串

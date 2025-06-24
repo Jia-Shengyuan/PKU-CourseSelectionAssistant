@@ -169,12 +169,12 @@ export const hasPlan = async() => {
 /**
  * 流式生成课表，支持实时显示推理过程
  * @param {Object} requestData - 请求数据
+ * @param {Object} modelConfig - 模型配置对象
  * @param {Function} onReasoningChunk - 推理过程回调函数
  * @param {Function} onResult - 结果回调函数
- * @param {Object} modelConfig - 模型配置对象
  * @returns {Promise<void>}
  */
-export const genPlanStream = async (requestData, onReasoningChunk, onResult, modelConfig) => {
+export const genPlanStream = async (requestData, modelConfig, onReasoningChunk, onResult) => {
 
     console.log('开始流式生成选课方案:', requestData, '模型配置:', modelConfig)
 
@@ -252,5 +252,20 @@ export const uploadPlanPdf = async (file) => {
   } catch (error) {
     console.error('上传培养方案PDF失败:', error);
     throw error;
+  }
+};
+
+/**
+ * 获取可用学期列表
+ * @returns {Promise<Array<string>>} 可用学期列表
+ */
+export const getAvailableSemesters = async () => {
+  try {
+    const response = await axios.get(`${BASE_URL}/db/semesters`);
+    return response.data;
+  } catch (error) {
+    console.error('获取可用学期失败:', error);
+    // 返回空数组而不是抛出异常，让调用方可以正常处理
+    return [];
   }
 };

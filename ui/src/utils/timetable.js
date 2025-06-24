@@ -1,5 +1,23 @@
 import { createCourseColorMap } from '@/utils/colors'
 
+/**
+ * 计算指定课表的总学分
+ * @param {Array} timetable - 课表数组
+ * @returns {number} 总学分
+ */
+export const calculateTimetableCredits = (timetable) => {
+  if (!timetable || !Array.isArray(timetable) || timetable.length === 0) {
+    return 0
+  }
+  let total = 0
+  timetable.forEach(course => {
+    if (course.credit) {
+      total += Number(course.credit)
+    }
+  })
+  return total
+}
+
 export const generateTableData = (timetable) => {
   
   const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']

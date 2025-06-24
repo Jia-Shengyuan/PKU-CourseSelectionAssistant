@@ -2,13 +2,14 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Loading, Check, Upload } from '@element-plus/icons-vue'
-import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan, genPlanStream, uploadPlanPdf, hasPlan } from '@/api/course'
+import { fetchCourseRawInfo, fetchCourse, fetchCourseByPlan, courseDataToMapArray, activateDatabase, getCourseEvaluation, readPlanPDF, genPlan, genPlanStream, uploadPlanPdf, hasPlan, getAvailableSemesters } from '@/api/course'
 import { getConfig, saveConfig } from '@/api/config'
 import { loginTreehole, searchTreehole } from '@/api/crawler'
-import { generateTableData } from '@/api/timetable'
-import { savePreference } from '@/utils/configService'
+import { generateTableData, calculateTimetableCredits } from '@/utils/timetable'
+import { savePreference, mapConfigToFormData } from '@/utils/configService'
 import { formatTeacherName, extractTeacherCodes } from '@/utils/teacherFormatter'
 import { formatCourseInfoToClass, parseClassId } from '@/utils/courseFormatter'
+import { handlePlanPdfUpload } from '@/utils/planPdfHandler'
 
 // 配置信息
 const formData = reactive({
@@ -37,10 +38,9 @@ const formData = reactive({
   sleep_random_range: 0.1
 })
 
-// 存储原有学期
 const originalSemester = ref('')
-// 记录数据库是否已激活
 const isDatabaseActivated = ref(false)
+const availableSemesters = ref([])
 
 // 课程列表数据
 const courses = ref([])
@@ -139,7 +139,7 @@ const showEditCourseDialog = (courseIndex, classIndex) => {
 const addCourse = async () => {
 
   if (!isDatabaseActivated.value) {
-    ElMessage.warning('请先设置学期，并激活数据库')
+    ElMessage.warning('请先设置学期！')
     return
   }  
   if (!newCourse.name) {
@@ -160,6 +160,7 @@ const addCourse = async () => {
   }
 
   try {
+
     const courseData = await fetchCourse(
       newCourse.name,
       parseClassId(newCourse.class_id),
@@ -178,7 +179,8 @@ const addCourse = async () => {
     courseData.forEach(course => {
       if (!courseMap.has(course.name)) {
         courseMap.set(course.name, []);
-      }        courseMap.get(course.name).push(formatCourseInfoToClass(course));
+      }        
+      courseMap.get(course.name).push(formatCourseInfoToClass(course));
     });
     // 将每个课程名都添加到 courses.value
     for (const [name, classes] of courseMap.entries()) {
@@ -255,7 +257,8 @@ const confirmAddClass = async () => {
     if (newClasses.length === 0) {
       ElMessage.warning('所有匹配的班级都已存在')
       return
-    }      // 添加新班级
+    }      
+    // 添加新班级
     course.classes.push(...newClasses.map(formatCourseInfoToClass))
 
     // 自动展开该课程
@@ -335,7 +338,7 @@ const EvaluationStatus = {
   SEARCHING: '搜索中',
   EVALUATING: '评价中',
   COMPLETED: '已完成',
-  ERROR: '错误'  // 添加错误状态
+  ERROR: '错误'
 }
 
 const timetables = ref([]) // 存储所有课表
@@ -343,14 +346,8 @@ const activeTimetableIndex = ref(0) // 当前显示的课表索引
 
 // 计算当前课表的总学分
 const updateTimetableTotalCredits = () => {
-  if (timetables.value.length > 0 && Array.isArray(timetables.value[activeTimetableIndex.value])) {
-    let total = 0
-    timetables.value[activeTimetableIndex.value].forEach(course => {
-      if (course.credit) {
-        total += Number(course.credit)
-      }
-    })
-    timetableTotalCredits.value = total
+  if (timetables.value.length > 0 && activeTimetableIndex.value < timetables.value.length) {
+    timetableTotalCredits.value = calculateTimetableCredits(timetables.value[activeTimetableIndex.value])
   } else {
     timetableTotalCredits.value = 0
   }
@@ -451,12 +448,13 @@ const handleCourseEvaluation = async () => {
           course => courseEvaluationStatus.value[course.name] === EvaluationStatus.COMPLETED
         )
 
+        // 所有课程评价完成，生成课表
         if (allCompleted) {
-          // 所有课程评价完成，生成课表
           await generateTimetables()
         }
+
       } catch (error) {
-        console.error(`(catch)评价课程 ${course.name} 失败:`, error)
+        console.error(`评价课程 ${course.name} 失败:`, error)
         courseEvaluationStatus.value[course.name] = EvaluationStatus.ERROR
         courseEvaluationContent.value[course.name] = `获取评价失败: ${error.message || error}`
         ElMessage.error(`评价课程 ${course.name} 失败`)
@@ -541,6 +539,11 @@ const generateTimetables = async () => {
 
     await genPlanStream(
       requestData,
+      {
+        name: formData.genPlanModelName,
+        temperature: formData.genPlanModelTemperature,
+        top_p: formData.genPlanModelTopP
+      }, // 传递生成课表模型配置
       // 推理过程回调
       (reasoningChunk) => {
         if (reasoningChunk.state === 'reasoning') {
@@ -585,12 +588,7 @@ const generateTimetables = async () => {
             timetableElement.scrollIntoView({ behavior: 'smooth' })
           }
         }, 100)      
-      },
-      {
-        name: formData.genPlanModelName,
-        temperature: formData.genPlanModelTemperature,
-        top_p: formData.genPlanModelTopP
-      } // 传递生成课表模型配置
+      }
     )
   } catch (error) {
     console.error('生成课表失败:', error)
@@ -605,7 +603,7 @@ const generateTimetables = async () => {
 const handlePlanCourseImport = async () => {
 
   if(!isDatabaseActivated.value) {
-    ElMessage.warning('请先设置学期，并激活数据库')
+    ElMessage.warning('请先设置学期！')
     return
   }
 
@@ -646,28 +644,26 @@ const handlePlanCourseImport = async () => {
   }
 }
 
-// 处理设定学期
-const handleSetSemester = async () => {
-
-  if (!formData.semester) {
-    ElMessage.warning('请输入学期')
-    return
-  }
+// 处理学期选择变化
+const handleSemesterChange = async (value) => {
+  if (!value) return
   
-  if (formData.semester === originalSemester.value) {
+  if (value === originalSemester.value) {
     ElMessage.info('学期已设置')
     return
   }
 
   try {
-    await activateDatabase(formData.semester)
-    originalSemester.value = formData.semester
+    await activateDatabase(value)
+    originalSemester.value = value
     isDatabaseActivated.value = true
     courses.value = []
-    ElMessage.success('学期设置成功，数据库已激活')
+    ElMessage.success('学期设置成功')
   } catch (error) {
     console.error('设置学期失败:', error)
     ElMessage.error('设置学期失败。请确保已将培养方案放置在config目录下，并命名为plan.pdf')
+    // 重置为原来的学期
+    formData.semester = originalSemester.value
   }
 }
 
@@ -676,39 +672,22 @@ const loadConfig = async () => {
 
   ElMessage.info('正在加载配置...')
   isLoadingConfig.value = true
-
-  try {    
-    const config = await getConfig()
-      // 更新表单数据
-    formData.apiProvider = config.model.base_url
-    formData.modelName = config.model.model_name // 保留旧的以兼容
-    formData.evaluateModelName = config.model.evaluate_model?.name || config.model.model_name
-    formData.evaluateModelTemperature = config.model.evaluate_model?.temperature || 0.75
-    formData.evaluateModelTopP = config.model.evaluate_model?.top_p || 0.9
-    formData.genPlanModelName = config.model.gen_plan_model?.name || config.model.model_name
-    formData.genPlanModelTemperature = config.model.gen_plan_model?.temperature || 0.7
-    formData.genPlanModelTopP = config.model.gen_plan_model?.top_p || 0.95
-    formData.apiKey = config.model.api_key
-    formData.temperature = config.model.temperature || formData.evaluateModelTemperature // 兼容性
-    formData.topP = config.model.top_p || formData.evaluateModelTopP // 兼容性
-    formData.stream = config.model.stream
+  try {        
     
-    formData.studentId = config.user.student_id
-    formData.password = config.user.portal_password
-    formData.grade = config.user.grade
-    formData.semester = config.user.semester
-    formData.userDescription = config.user.introduction
-    formData.chrome_user_data_dir = config.crawler.chrome_user_data_dir
+    const config = await getConfig()
+    availableSemesters.value = await getAvailableSemesters()
+    
+    mapConfigToFormData(config, formData)
 
-    // 新增配置项
-    formData.num_timetable = config.course.num_timetable
-    formData.num_search = config.crawler.num_search
-    formData.sleep_after_search = config.crawler.sleep_after_search
-    formData.sleep_between_scroll = config.crawler.sleep_between_scroll
-    formData.sleep_random_range = config.crawler.sleep_random_range
-
-    // 保存原始学期
     originalSemester.value = formData.semester
+
+    // 防错机制：检查学期是否在可用学期列表中
+    if (formData.semester && availableSemesters.value.length > 0 && !availableSemesters.value.includes(formData.semester)) {
+      console.warn(`配置中的学期 "${formData.semester}" 不在可用学期列表中，已自动清空`)
+      formData.semester = ''
+      originalSemester.value = ''
+      ElMessage.warning(`配置中的学期不可用，已自动清空，请重新选择学期`)
+    }
 
     // 激活数据库
     if (formData.semester) {
@@ -753,30 +732,6 @@ const deleteAllCourses = () => {
   })
 }
 
-// 处理培养方案PDF上传
-const handlePlanPdfUpload = async (event) => {
-  const file = event.target.files[0]
-  if (!file) return
-  
-  // 验证文件类型
-  if (file.type !== 'application/pdf') {
-    ElMessage.error('请选择PDF格式的文件')
-    return
-  }
-  
-  try {
-    ElMessage.info('正在上传培养方案PDF...')
-    const result = await uploadPlanPdf(file)
-    ElMessage.success('培养方案PDF上传成功，您可以点击"导入培养方案课程"按钮导入课程')
-  } catch (error) {
-    console.error('上传培养方案PDF失败:', error)
-    ElMessage.error('上传培养方案PDF失败，请重试')
-  }
-  
-  // 重置文件输入以允许重新选择同一文件
-  event.target.value = ''
-}
-
 onMounted(async () => {
   await loadConfig()
 })
@@ -804,14 +759,24 @@ onMounted(async () => {
             </el-form-item>
           </el-col>          <el-col :span="8">
             <el-form-item label="当前学期">
-              <el-input v-model="formData.semester" placeholder="请输入当前学期（如2024-2025-2）" />
+              <el-select 
+                v-model="formData.semester" 
+                placeholder="请选择学期"
+                @change="handleSemesterChange"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="semester in availableSemesters"
+                  :key="semester"
+                  :label="semester"
+                  :value="semester"
+                />
+              </el-select>
             </el-form-item>
           </el-col>
           <el-col :span="8">
             <el-form-item>
               <div style="display: flex; gap: 10px;">
-                <el-button type="primary" @click="handleSetSemester">设定学期</el-button>
-                
                 <!-- 隐藏的文件输入框 -->
                 <input
                   type="file"
