@@ -551,6 +551,9 @@ const generateTimetables = async () => {
         } else if (reasoningChunk.state === 'retrying') {
           reasoningContent.value += `\n\n[重试] ${reasoningChunk.content}\n`
         } else if (reasoningChunk.state === 'error') {
+          
+          console.error('生成课表过程中发生错误:', reasoningChunk.content)
+
           reasoningContent.value += `\n\n[错误] ${reasoningChunk.content}\n`
           isReasoning.value = false
           isGeneratingTimetable.value = false

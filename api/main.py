@@ -319,9 +319,11 @@ async def gen_plan_stream(gen_plan_request: GenPlanRequest) -> StreamingResponse
 
                 # If error, return error message to user
                 if item.state == "error":
+                    print("fastapi rrecevied error: " + item.content)
                     yield json.dumps({
                         "type": "error",
-                        "message": item.content
+                        "state": "error",
+                        "content": item.content
                     }, ensure_ascii=False) + "\n"
                     return
                 

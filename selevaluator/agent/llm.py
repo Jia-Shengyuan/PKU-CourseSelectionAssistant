@@ -89,7 +89,7 @@ class LLM(BaseLLM):
             return LLM_Response(state = "error", content = "Invalid API key")
         except Exception as e:
             self.logger.log_error(e)
-            return LLM_Response(state = "error", content = "Unable to chat with LLM, " + e)
+            return LLM_Response(state = "error", content = "Unable to chat with LLM, " + str(e))
             # return "Error: Unable to chat with LLM"
                 
 
@@ -126,10 +126,12 @@ class AsyncLLM(BaseLLM):
 
         except openai.AuthenticationError as e:
             self.logger.log_error(e)
-            yield LLM_Response(state = "error", content = "Error: Invalid API key")
+            yield LLM_Response(state="error", content = "Error: Invalid API key")
+            return
         except Exception as e:
             self.logger.log_error(e)
-            yield LLM_Response(state = "error", content = "Error: Unable to chat with LLM, " + e)
+            yield LLM_Response(state="error", content = "Error: Unable to chat with LLM, " + str(e))
+            return
             # yield "Error: Unable to chat with LLM"
 
 class AgentLLM(AsyncLLM):
@@ -157,7 +159,7 @@ class AgentLLM(AsyncLLM):
 
         response_text = ""
         async for chunk in super().chat(messages):
-            if chunk.state == "reasoning":
+            if chunk.state in ["reasoning", "error"]:
                 yield chunk
             elif chunk.state == "answering":
                 response_text += chunk.content
@@ -186,7 +188,7 @@ class AgentLLM(AsyncLLM):
                 
                 response_text = ""
                 async for chunk in super().chat(messages):
-                    if chunk.state == "reasoning":
+                    if chunk.state in ["reasoning", "error"]:
                         yield chunk
                     elif chunk.state == "answering":
                         response_text += chunk.content

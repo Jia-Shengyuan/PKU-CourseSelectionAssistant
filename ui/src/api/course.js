@@ -211,11 +211,18 @@ export const genPlanStream = async (requestData, modelConfig, onReasoningChunk, 
             for (const line of lines) {
                 try {
                     const data = JSON.parse(line)
-                    if (data.type === 'reasoning') {
-                        onReasoningChunk && onReasoningChunk(data)
-                    } else if (data.type === 'result') {
+                    if (data.type === 'result') {
                         onResult && onResult(data.data)
+                    } else {
+                        onReasoningChunk && onReasoningChunk(data)
                     }
+                    // if (data.type === 'reasoning') {
+                        // onReasoningChunk && onReasoningChunk(data)
+                    // } else if (data.type === 'result') {
+                        // onResult && onResult(data.data)
+                    // } else if (data.type === 'error') {
+                        // onReasoningChunk && onReasoningChunk(data)
+                    // }
                 } catch (e) {
                     console.warn('解析JSON失败:', e, '原始数据:', line)
                 }
