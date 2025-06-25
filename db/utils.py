@@ -27,7 +27,7 @@ def read_pdf(pdf_path):
         for page in pdf.pages:
             text = page.extract_text()
             for line in text.splitlines():
-                if "毕业总学分" in line:
+                if ("毕业要求" in line) or ("毕业总学分" in line):
                     useful_info = True
                 if useful_info:
                     results = results + line + "\n"
