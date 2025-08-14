@@ -88,7 +88,7 @@ async def get_available_semesters() -> List[str]:
     """
     获取可用的学期列表，通过扫描db目录下的.db文件
     """
-    return ["2024-2025-2"]  # Only this semester is available now
+    # return ["2024-2025-2"]  # Only this semester is available now
 
     try:
         db_dir = "db"
