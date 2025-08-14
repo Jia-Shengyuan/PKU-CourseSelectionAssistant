@@ -15,7 +15,7 @@ import json
 class CourseDataProcessor:
     def __init__(self):
         self.logger = Logger()
-        self.settings = LLM_Settings()
+        self.settings = LLM_Settings(model_type="evaluate_model")
         self.llm = AsyncLLM(self.settings, self.logger)
         
     async def process_batch(self, df_batch, batch_index, start_index):
@@ -51,7 +51,7 @@ class CourseDataProcessor:
             self.logger.log_info(f"开始处理第{batch_index + 1}批数据...")
             response = ""
             async for token in self.llm.chat(messages):
-                response += token
+                response += token.content
             
             # 解析JSON响应
             processed_data = json.loads(response)
@@ -142,7 +142,7 @@ async def main():
     input_file = "data/2025-2026-1.xlsx"
     output_file = "data/2025-2026-1_processed.xlsx"
     # 可以调整batch_size和max_concurrent参数
-    await processor.process_excel(input_file, output_file, batch_size=32, max_concurrent=40)
+    await processor.process_excel(input_file, output_file, batch_size=32, max_concurrent=10)
 
 if __name__ == "__main__":
     asyncio.run(main())

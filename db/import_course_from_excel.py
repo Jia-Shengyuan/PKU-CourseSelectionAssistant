@@ -38,7 +38,7 @@ def import_courses(file_path: str):
     df = read_excel(file_path)
     db: Session = SessionLocal()
     # 按课程名 + 教师分组
-    grouped = df.groupby(['course_name', 'course_id', 'class_id'])
+    grouped = df.groupby(['course_name', 'class_id'])
 
     count = 0
     for _, group in grouped:
@@ -49,4 +49,4 @@ def import_courses(file_path: str):
     print(f"✅ 成功导入 {count} 门课程")
 
 if __name__ == "__main__":
-    import_courses("data/processed_courses.xlsx")
+    import_courses("data/2025-2026-1_processed.xlsx")
