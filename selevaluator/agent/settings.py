@@ -22,8 +22,8 @@ class LLM_Settings:
         
         self.base_url = base_url or json_config["base_url"]
         self.api_key = api_key or json_config["api_key"]
-        self.model_name = model_name or json_config[model_type]["name"]
-        self.temperature = temperature or json_config[model_type]["temperature"]
-        self.top_p = top_p or json_config[model_type]["top_p"]
+        self.model_name = model_name or json_config[model_type + "_model"]["name"]
+        self.temperature = temperature or json_config[model_type + "_model"]["temperature"]
+        self.top_p = top_p or json_config[model_type + "_model"]["top_p"]
         self.stream = stream if stream is not None else json_config.get("stream", True)
         

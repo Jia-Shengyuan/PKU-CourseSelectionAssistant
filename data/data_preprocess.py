@@ -15,7 +15,7 @@ import json
 class CourseDataProcessor:
     def __init__(self):
         self.logger = Logger()
-        self.settings = LLM_Settings(model_type="evaluate_model")
+        self.settings = LLM_Settings(model_type="evaluate")
         self.llm = AsyncLLM(self.settings, self.logger)
         
     async def process_batch(self, df_batch, batch_index, start_index):
