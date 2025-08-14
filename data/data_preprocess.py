@@ -139,8 +139,8 @@ class CourseDataProcessor:
 
 async def main():
     processor = CourseDataProcessor()
-    input_file = "data/2024-2025-2_new.xlsx"
-    output_file = "data/processed_courses.xlsx"
+    input_file = "data/2025-2026-1.xlsx"
+    output_file = "data/2025-2026-1_processed.xlsx"
     # 可以调整batch_size和max_concurrent参数
     await processor.process_excel(input_file, output_file, batch_size=32, max_concurrent=40)
 
