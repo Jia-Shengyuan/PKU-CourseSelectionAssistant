@@ -5,6 +5,11 @@ from db.dbmodel.dbcourse import DbCourse, CourseCreate
 from db.session.base import Base
 from db.crud import create_course
 
+'''
+Run this code to generate .db database from processed excel timetables.
+Command: python -m db.import_course_from_excel (Run in the root directory)
+'''
+
 Base.metadata.create_all(bind=engine)
 
 def read_excel(file_path: str):
